@@ -1,13 +1,10 @@
 import { createFileRoute } from '@tanstack/react-router'
+import { HomeTemplate } from '@/features/home'
 
 export const Route = createFileRoute('/')({
-  component: Index,
+  component: RouteComponent,
 })
 
-function Index() {
-  return (
-    <div className="p-2">
-      <h1>Welcome to Microblog!</h1>
-    </div>
-  )
+function RouteComponent() {
+  return <HomeTemplate />;
 }

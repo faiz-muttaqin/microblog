@@ -87,7 +87,7 @@
   "info": {
     "description": "API Documentation for microblog",
     "title": "microblog",
-    "version": "0.0.6"
+    "version": "0.0.29"
   },
   "openapi": "3.0.4",
   "paths": {
@@ -15317,13 +15317,13 @@
       }
     },
     "/api/threads": {
-      "get": {
-        "description": "Retrieve a list of resources with optional filtering and pagination",
-        "operationId": "getApiThreads",
+      "post": {
+        "description": "Create a new resource with the provided data",
+        "operationId": "postApiThreads",
         "parameters": null,
         "requestBody": {},
         "responses": {
-          "200": {
+          "201": {
             "content": {
               "application/json": {
                 "schema": {
@@ -15331,7 +15331,17 @@
                 }
               }
             },
-            "description": "Successful response"
+            "description": "Resource created successfully"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Bad request - Invalid input data"
           },
           "401": {
             "content": {
@@ -15353,16 +15363,6 @@
             },
             "description": "Forbidden - Insufficient permissions"
           },
-          "404": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            },
-            "description": "Not found - Resource does not exist"
-          },
           "500": {
             "content": {
               "application/json": {
@@ -15375,7 +15375,7 @@
           }
         },
         "security": null,
-        "summary": "Get all backend/internal/routes",
+        "summary": "Create new backend/internal/routes",
         "tags": [
           "Api"
         ]

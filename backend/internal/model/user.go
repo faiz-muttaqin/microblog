@@ -16,6 +16,7 @@ import (
 )
 
 type User struct {
+	// Tokens             []Token        `gorm:"foreignKey:UserID" json:"tokens"`
 	ID                 string         `gorm:"primaryKey;column:id;size:36" json:"id" ui:"sortable"`
 	ExternalID         string         `gorm:"column:external_id;size:200" json:"external_id"` // Firebase ID
 	VerificationStatus string         `gorm:"column:verification_status;size:50" json:"verification_status"`
@@ -23,7 +24,6 @@ type User struct {
 	Email              types.Email    `gorm:"column:email;size:100;unique" json:"email" ui:"creatable;visible;visibility;editable;filterable;sortable"`
 	Username           string         `gorm:"column:username;size:50" json:"username" ui:"creatable;visible;visibility;editable;filterable;sortable"`
 	Name               string         `gorm:"column:name;size:100" json:"name"`
-	Tokens             []Token        `gorm:"foreignKey:UserID" json:"tokens"`
 	FirstName          string         `gorm:"column:first_name;size:50" json:"first_name" ui:"creatable;visible;visibility;editable;filterable;sortable"`
 	LastName           string         `gorm:"column:last_name;size:50" json:"last_name" ui:"creatable;visible;visibility;editable;filterable;sortable"`
 	PhoneNumber        types.Phone    `gorm:"column:phone_number;size:20" json:"phone_number" ui:"creatable;visible;visibility;editable;filterable;sortable"`

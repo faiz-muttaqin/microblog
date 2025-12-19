@@ -7,19 +7,19 @@ import (
 	"gorm.io/gorm"
 )
 
-type Token struct {
-	ID       string    `json:"id" gorm:"primaryKey;column:id;size:36"`
-	UserID   string    `json:"user_id" gorm:"column:user_id;size:36"`
-	CreateAt time.Time `json:"created_at" gorm:"autoCreateTime;column:created_at"`
-	Token    string    `json:"token" gorm:"column:token;size:255;uniqueIndex"`
-}
+// type Token struct {
+// 	ID       string    `json:"id" gorm:"primaryKey;column:id;size:36"`
+// 	UserID   string    `json:"user_id" gorm:"column:user_id;size:36"`
+// 	CreateAt time.Time `json:"created_at" gorm:"autoCreateTime;column:created_at"`
+// 	Token    string    `json:"token" gorm:"column:token;size:255;uniqueIndex"`
+// }
 
-func (t *Token) BeforeCreate(tx *gorm.DB) error {
-	if t.ID == "" {
-		t.ID = uuid.New().String()
-	}
-	return nil
-}
+// func (t *Token) BeforeCreate(tx *gorm.DB) error {
+// 	if t.ID == "" {
+// 		t.ID = uuid.New().String()
+// 	}
+// 	return nil
+// }
 
 type Thread struct {
 	ID        string       `json:"id" gorm:"primaryKey;column:id;size:36"`

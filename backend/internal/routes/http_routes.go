@@ -2,6 +2,8 @@ package routes
 
 import (
 	"microblog/backend/internal/database"
+	"microblog/backend/internal/handler"
+	"microblog/backend/internal/helper"
 	"microblog/backend/internal/model"
 	"microblog/backend/pkg/types"
 	"microblog/backend/pkg/util"
@@ -17,35 +19,46 @@ var R *gin.Engine
 func Routes() {
 
 	// model.User endpoints
-	nomoAPI := R.Group(util.GetPathOnly(util.Getenv("VITE_BACKEND", "/api")))
-	nomoAPI.POST("/register", RegisterHandler)
-	nomoAPI.POST("/login", LoginHandler)
-	nomoAPI.GET("/users", GetAllUsersHandler)
-	nomoAPI.Any("/users/me", GetOwnProfileHandler)
+	backendAPI := R.Group(util.GetPathOnly(util.Getenv("VITE_BACKEND", "/api")))
+	backendAPI.GET("/options", handler.GetOptions())
+	backendAPI.OPTIONS("/auth/login", handler.GetAuthLogin())
+	backendAPI.GET("/auth/login", handler.GetAuthLogin())
+	backendAPI.GET("/auth/logout", handler.GetAuthLogout())
+	backendAPI.GET("/auth/verify", handler.VerifyAuth()) // Test auth endpoint
+	// backendAPI.GET("/roles", handler.GetRoles())
+	// backendAPI.GET("/users", handler.GET_DEFAULT_TableDataHandler(database.DB, &model.User{}, []string{"UserRole"}))
+	// r.POST("/users", handler.POST_DEFAULT_TableDataHandler(database.DB, &model.User{}, []string{"UserRole"}))
+	// r.PATCH("/users", handler.PATCH_DEFAULT_TableDataHandler(database.DB, &model.User{}, []string{"UserRole"}))
+	// r.PUT("/users", handler.PUT_DEFAULT_TableDataHandler(database.DB, &model.User{}, []string{"UserRole"}))
+	// r.DELETE("/users", handler.DELETE_DEFAULT_TableDataHandler(database.DB, &model.User{}))
+	// backendAPI.POST("/register", RegisterHandler)
+	// backendAPI.POST("/login", LoginHandler)
+	backendAPI.GET("/users", GetAllUsersHandler)
+	backendAPI.Any("/users/me", GetOwnProfileHandler)
 	// Thread endpoints
-	nomoAPI.GET("/threads", GetAllThreadsHandler)
-	nomoAPI.POST("/threads", CreateThreadHandler)
-	nomoAPI.GET("/threads/:threadId", GetThreadDetailHandler)
-	nomoAPI.POST("/threads/:threadId/comments", CreateThreadCommentHandler)
-	nomoAPI.POST("/threads/:threadId/up-vote", UpVoteThreadHandler)
-	nomoAPI.POST("/threads/:threadId/down-vote", DownVoteThreadHandler)
-	nomoAPI.POST("/threads/:threadId/neutral-vote", NeutralVoteThreadHandler)
+	backendAPI.GET("/threads", GetAllThreadsHandler)
+	backendAPI.POST("/threads", CreateThreadHandler)
+	backendAPI.GET("/threads/:threadId", GetThreadDetailHandler)
+	backendAPI.POST("/threads/:threadId/comments", CreateThreadCommentHandler)
+	backendAPI.POST("/threads/:threadId/up-vote", UpVoteThreadHandler)
+	backendAPI.POST("/threads/:threadId/down-vote", DownVoteThreadHandler)
+	backendAPI.POST("/threads/:threadId/neutral-vote", NeutralVoteThreadHandler)
 
 	// Comment vote endpoints
-	nomoAPI.POST("/threads/:threadId/comments/:commentId/up-vote", UpVoteCommentHandler)
-	nomoAPI.POST("/threads/:threadId/comments/:commentId/down-vote", DownVoteCommentHandler)
-	nomoAPI.POST("/threads/:threadId/comments/:commentId/neutral-vote", NeutralVoteCommentHandler)
+	backendAPI.POST("/threads/:threadId/comments/:commentId/up-vote", UpVoteCommentHandler)
+	backendAPI.POST("/threads/:threadId/comments/:commentId/down-vote", DownVoteCommentHandler)
+	backendAPI.POST("/threads/:threadId/comments/:commentId/neutral-vote", NeutralVoteCommentHandler)
 
 	// CRUD endpoints for threads
-	nomoAPI.PUT("/threads/:threadId", UpdateThreadHandler)
-	nomoAPI.DELETE("/threads/:threadId", DeleteThreadHandler)
+	backendAPI.PUT("/threads/:threadId", UpdateThreadHandler)
+	backendAPI.DELETE("/threads/:threadId", DeleteThreadHandler)
 
 	// CRUD endpoints for comments
-	nomoAPI.PUT("/threads/:threadId/comments/:commentId", UpdateCommentHandler)
-	nomoAPI.DELETE("/threads/:threadId/comments/:commentId", DeleteCommentHandler)
+	backendAPI.PUT("/threads/:threadId/comments/:commentId", UpdateCommentHandler)
+	backendAPI.DELETE("/threads/:threadId/comments/:commentId", DeleteCommentHandler)
 
 	// Leaderboard
-	nomoAPI.GET("/leaderboards", GetLeaderboardsHandler)
+	backendAPI.GET("/leaderboards", GetLeaderboardsHandler)
 }
 
 // Example handler: Register
@@ -149,20 +162,20 @@ func LoginHandler(c *gin.Context) {
 	}
 
 	tokenStr := RandString(64)
-	token := model.Token{
-		ID:       uuid.New().String(),
-		UserID:   user.ID,
-		CreateAt: time.Now(),
-		Token:    tokenStr,
-	}
-	if err := database.DB.Create(&token).Error; err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{
-			"status":  "fail",
-			"message": "failed to save token",
-			"data":    gin.H{},
-		})
-		return
-	}
+	// token := model.Token{
+	// 	ID:       uuid.New().String(),
+	// 	UserID:   user.ID,
+	// 	CreateAt: time.Now(),
+	// 	Token:    tokenStr,
+	// }
+	// if err := database.DB.Create(&token).Error; err != nil {
+	// 	c.JSON(http.StatusInternalServerError, gin.H{
+	// 		"status":  "fail",
+	// 		"message": "failed to save token",
+	// 		"data":    gin.H{},
+	// 	})
+	// 	return
+	// }
 
 	c.JSON(http.StatusOK, gin.H{
 		"status":  "success",
@@ -205,35 +218,11 @@ func GetAllUsersHandler(c *gin.Context) {
 
 // Get own profile
 func GetOwnProfileHandler(c *gin.Context) {
-	// Get token from Authorization header
-	authHeader := c.GetHeader("Authorization")
-	if authHeader == "" || len(authHeader) < 8 || authHeader[:7] != "Bearer " {
+	user, err := helper.GetFirebaseUser(c)
+	if err != nil {
 		c.JSON(http.StatusUnauthorized, gin.H{
-			"status":  "fail",
-			"message": "missing or invalid authorization header",
-			"data":    gin.H{},
-		})
-		return
-	}
-	tokenStr := authHeader[7:] // Remove "Bearer " prefix
-
-	// Find token in DB
-	var token model.Token
-	if err := database.DB.Where("token = ?", tokenStr).First(&token).Error; err != nil {
-		c.JSON(http.StatusUnauthorized, gin.H{
-			"status":  "fail",
-			"message": "invalid token",
-		})
-		return
-	}
-
-	// Find user by token.UserID
-	var user model.User
-	if err := database.DB.Where("id = ?", token.UserID).First(&user).Error; err != nil {
-		c.JSON(http.StatusNotFound, gin.H{
-			"status":  "fail",
-			"message": "user not found",
-			"data":    gin.H{},
+			"success": false,
+			"error":   err.Error(),
 		})
 		return
 	}
@@ -299,36 +288,11 @@ func GetAllThreadsHandler(c *gin.Context) {
 
 // Create thread
 func CreateThreadHandler(c *gin.Context) {
-	// Get token from Authorization header
-	authHeader := c.GetHeader("Authorization")
-	if authHeader == "" || len(authHeader) < 8 || authHeader[:7] != "Bearer " {
+	user, err := helper.GetFirebaseUser(c)
+	if err != nil {
 		c.JSON(http.StatusUnauthorized, gin.H{
-			"status":  "fail",
-			"message": "Invalid token signature",
-			"data":    gin.H{},
-		})
-		return
-	}
-	tokenStr := authHeader[7:]
-
-	// Find token in DB
-	var token model.Token
-	if err := database.DB.Where("token = ?", tokenStr).First(&token).Error; err != nil {
-		c.JSON(http.StatusUnauthorized, gin.H{
-			"status":  "fail",
-			"message": "Invalid token signature",
-			"data":    gin.H{},
-		})
-		return
-	}
-
-	// Find user by token.UserID
-	var user model.User
-	if err := database.DB.Where("id = ?", token.UserID).First(&user).Error; err != nil {
-		c.JSON(http.StatusUnauthorized, gin.H{
-			"status":  "fail",
-			"message": "Invalid token signature",
-			"data":    gin.H{},
+			"success": false,
+			"error":   err.Error(),
 		})
 		return
 	}
@@ -392,24 +356,11 @@ func CreateThreadHandler(c *gin.Context) {
 func UpdateThreadHandler(c *gin.Context) {
 	threadID := c.Param("threadId")
 
-	// Get token from Authorization header
-	authHeader := c.GetHeader("Authorization")
-	if authHeader == "" || len(authHeader) < 8 || authHeader[:7] != "Bearer " {
+	userData, err := helper.GetFirebaseUser(c)
+	if err != nil {
 		c.JSON(http.StatusUnauthorized, gin.H{
-			"status":  "fail",
-			"message": "invalid authorization header",
-			"data":    gin.H{},
-		})
-		return
-	}
-	tokenStr := authHeader[7:]
-
-	var token model.Token
-	if err := database.DB.Where("token = ?", tokenStr).First(&token).Error; err != nil {
-		c.JSON(http.StatusUnauthorized, gin.H{
-			"status":  "fail",
-			"message": "invalid token",
-			"data":    gin.H{},
+			"success": false,
+			"error":   err.Error(),
 		})
 		return
 	}
@@ -424,7 +375,7 @@ func UpdateThreadHandler(c *gin.Context) {
 		return
 	}
 
-	if thread.OwnerID != token.UserID {
+	if thread.OwnerID != userData.ID {
 		c.JSON(http.StatusForbidden, gin.H{
 			"status":  "fail",
 			"message": "not authorized to update this thread",
@@ -493,23 +444,11 @@ func UpdateThreadHandler(c *gin.Context) {
 func DeleteThreadHandler(c *gin.Context) {
 	threadID := c.Param("threadId")
 
-	authHeader := c.GetHeader("Authorization")
-	if authHeader == "" || len(authHeader) < 8 || authHeader[:7] != "Bearer " {
+	userData, err := helper.GetFirebaseUser(c)
+	if err != nil {
 		c.JSON(http.StatusUnauthorized, gin.H{
-			"status":  "fail",
-			"message": "invalid authorization header",
-			"data":    gin.H{},
-		})
-		return
-	}
-	tokenStr := authHeader[7:]
-
-	var token model.Token
-	if err := database.DB.Where("token = ?", tokenStr).First(&token).Error; err != nil {
-		c.JSON(http.StatusUnauthorized, gin.H{
-			"status":  "fail",
-			"message": "invalid token",
-			"data":    gin.H{},
+			"success": false,
+			"error":   err.Error(),
 		})
 		return
 	}
@@ -524,7 +463,7 @@ func DeleteThreadHandler(c *gin.Context) {
 		return
 	}
 
-	if thread.OwnerID != token.UserID {
+	if thread.OwnerID != userData.ID {
 		c.JSON(http.StatusForbidden, gin.H{
 			"status":  "fail",
 			"message": "not authorized to delete this thread",
@@ -552,24 +491,11 @@ func DeleteThreadHandler(c *gin.Context) {
 func UpdateCommentHandler(c *gin.Context) {
 	threadID := c.Param("threadId")
 	commentID := c.Param("commentId")
-
-	authHeader := c.GetHeader("Authorization")
-	if authHeader == "" || len(authHeader) < 8 || authHeader[:7] != "Bearer " {
+	userData, err := helper.GetFirebaseUser(c)
+	if err != nil {
 		c.JSON(http.StatusUnauthorized, gin.H{
-			"status":  "fail",
-			"message": "invalid authorization header",
-			"data":    gin.H{},
-		})
-		return
-	}
-	tokenStr := authHeader[7:]
-
-	var token model.Token
-	if err := database.DB.Where("token = ?", tokenStr).First(&token).Error; err != nil {
-		c.JSON(http.StatusUnauthorized, gin.H{
-			"status":  "fail",
-			"message": "invalid token",
-			"data":    gin.H{},
+			"success": false,
+			"error":   err.Error(),
 		})
 		return
 	}
@@ -584,7 +510,7 @@ func UpdateCommentHandler(c *gin.Context) {
 		return
 	}
 
-	if comment.OwnerID != token.UserID {
+	if comment.OwnerID != userData.ID {
 		c.JSON(http.StatusForbidden, gin.H{
 			"status":  "fail",
 			"message": "not authorized to update this comment",
@@ -638,24 +564,11 @@ func UpdateCommentHandler(c *gin.Context) {
 func DeleteCommentHandler(c *gin.Context) {
 	threadID := c.Param("threadId")
 	commentID := c.Param("commentId")
-
-	authHeader := c.GetHeader("Authorization")
-	if authHeader == "" || len(authHeader) < 8 || authHeader[:7] != "Bearer " {
+	userData, err := helper.GetFirebaseUser(c)
+	if err != nil {
 		c.JSON(http.StatusUnauthorized, gin.H{
-			"status":  "fail",
-			"message": "invalid authorization header",
-			"data":    gin.H{},
-		})
-		return
-	}
-	tokenStr := authHeader[7:]
-
-	var token model.Token
-	if err := database.DB.Where("token = ?", tokenStr).First(&token).Error; err != nil {
-		c.JSON(http.StatusUnauthorized, gin.H{
-			"status":  "fail",
-			"message": "invalid token",
-			"data":    gin.H{},
+			"success": false,
+			"error":   err.Error(),
 		})
 		return
 	}
@@ -670,7 +583,7 @@ func DeleteCommentHandler(c *gin.Context) {
 		return
 	}
 
-	if comment.OwnerID != token.UserID {
+	if comment.OwnerID != userData.ID {
 		c.JSON(http.StatusForbidden, gin.H{
 			"status":  "fail",
 			"message": "not authorized to delete this comment",
@@ -789,37 +702,11 @@ func CreateThreadCommentHandler(c *gin.Context) {
 		})
 		return
 	}
-
-	// Get token from Authorization header
-	authHeader := c.GetHeader("Authorization")
-	if authHeader == "" || len(authHeader) < 8 || authHeader[:7] != "Bearer " {
+	user, err := helper.GetFirebaseUser(c)
+	if err != nil {
 		c.JSON(http.StatusUnauthorized, gin.H{
-			"status":  "fail",
-			"message": "Invalid token signature",
-			"data":    gin.H{},
-		})
-		return
-	}
-	tokenStr := authHeader[7:]
-
-	// Find token in DB
-	var token model.Token
-	if err := database.DB.Where("token = ?", tokenStr).First(&token).Error; err != nil {
-		c.JSON(http.StatusUnauthorized, gin.H{
-			"status":  "fail",
-			"message": "Invalid token signature",
-			"data":    gin.H{},
-		})
-		return
-	}
-
-	// Find user by token.UserID
-	var user model.User
-	if err := database.DB.Where("id = ?", token.UserID).First(&user).Error; err != nil {
-		c.JSON(http.StatusUnauthorized, gin.H{
-			"status":  "fail",
-			"message": "Invalid token signature",
-			"data":    gin.H{},
+			"success": false,
+			"error":   err.Error(),
 		})
 		return
 	}
@@ -891,41 +778,14 @@ func UpVoteThreadHandler(c *gin.Context) {
 		})
 		return
 	}
-
-	// Get token from Authorization header
-	authHeader := c.GetHeader("Authorization")
-	if authHeader == "" || len(authHeader) < 8 || authHeader[:7] != "Bearer " {
+	user, err := helper.GetFirebaseUser(c)
+	if err != nil {
 		c.JSON(http.StatusUnauthorized, gin.H{
-			"status":  "fail",
-			"message": "invalid authorization header",
-			"data":    gin.H{},
+			"success": false,
+			"error":   err.Error(),
 		})
 		return
 	}
-	tokenStr := authHeader[7:]
-
-	// Find token in DB
-	var token model.Token
-	if err := database.DB.Where("token = ?", tokenStr).First(&token).Error; err != nil {
-		c.JSON(http.StatusUnauthorized, gin.H{
-			"status":  "fail",
-			"message": "invalid token",
-			"data":    gin.H{},
-		})
-		return
-	}
-
-	// Find user by token.UserID
-	var user model.User
-	if err := database.DB.Where("id = ?", token.UserID).First(&user).Error; err != nil {
-		c.JSON(http.StatusUnauthorized, gin.H{
-			"status":  "fail",
-			"message": "user not found",
-			"data":    gin.H{},
-		})
-		return
-	}
-
 	// Check if user already voted
 	var vote model.ThreadVote
 	if err := database.DB.Where("thread_id = ? AND user_id = ?", threadID, user.ID).First(&vote).Error; err == nil {
@@ -986,37 +846,11 @@ func DownVoteThreadHandler(c *gin.Context) {
 		})
 		return
 	}
-
-	// Get token from Authorization header
-	authHeader := c.GetHeader("Authorization")
-	if authHeader == "" || len(authHeader) < 8 || authHeader[:7] != "Bearer " {
+	user, err := helper.GetFirebaseUser(c)
+	if err != nil {
 		c.JSON(http.StatusUnauthorized, gin.H{
-			"status":  "fail",
-			"message": "invalid authorization header",
-			"data":    gin.H{},
-		})
-		return
-	}
-	tokenStr := authHeader[7:]
-
-	// Find token in DB
-	var token model.Token
-	if err := database.DB.Where("token = ?", tokenStr).First(&token).Error; err != nil {
-		c.JSON(http.StatusUnauthorized, gin.H{
-			"status":  "fail",
-			"message": "invalid token",
-			"data":    gin.H{},
-		})
-		return
-	}
-
-	// Find user by token.UserID
-	var user model.User
-	if err := database.DB.Where("id = ?", token.UserID).First(&user).Error; err != nil {
-		c.JSON(http.StatusUnauthorized, gin.H{
-			"status":  "fail",
-			"message": "user not found",
-			"data":    gin.H{},
+			"success": false,
+			"error":   err.Error(),
 		})
 		return
 	}
@@ -1081,37 +915,11 @@ func NeutralVoteThreadHandler(c *gin.Context) {
 		})
 		return
 	}
-
-	// Get token from Authorization header
-	authHeader := c.GetHeader("Authorization")
-	if authHeader == "" || len(authHeader) < 8 || authHeader[:7] != "Bearer " {
+	user, err := helper.GetFirebaseUser(c)
+	if err != nil {
 		c.JSON(http.StatusUnauthorized, gin.H{
-			"status":  "fail",
-			"message": "invalid authorization header",
-			"data":    gin.H{},
-		})
-		return
-	}
-	tokenStr := authHeader[7:]
-
-	// Find token in DB
-	var token model.Token
-	if err := database.DB.Where("token = ?", tokenStr).First(&token).Error; err != nil {
-		c.JSON(http.StatusUnauthorized, gin.H{
-			"status":  "fail",
-			"message": "invalid token",
-			"data":    gin.H{},
-		})
-		return
-	}
-
-	// Find user by token.UserID
-	var user model.User
-	if err := database.DB.Where("id = ?", token.UserID).First(&user).Error; err != nil {
-		c.JSON(http.StatusUnauthorized, gin.H{
-			"status":  "fail",
-			"message": "user not found",
-			"data":    gin.H{},
+			"success": false,
+			"error":   err.Error(),
 		})
 		return
 	}
@@ -1176,37 +984,11 @@ func UpVoteCommentHandler(c *gin.Context) {
 		})
 		return
 	}
-
-	// Get token from Authorization header
-	authHeader := c.GetHeader("Authorization")
-	if authHeader == "" || len(authHeader) < 8 || authHeader[:7] != "Bearer " {
+	user, err := helper.GetFirebaseUser(c)
+	if err != nil {
 		c.JSON(http.StatusUnauthorized, gin.H{
-			"status":  "fail",
-			"message": "invalid authorization header",
-			"data":    gin.H{},
-		})
-		return
-	}
-	tokenStr := authHeader[7:]
-
-	// Find token in DB
-	var token model.Token
-	if err := database.DB.Where("token = ?", tokenStr).First(&token).Error; err != nil {
-		c.JSON(http.StatusUnauthorized, gin.H{
-			"status":  "fail",
-			"message": "invalid token",
-			"data":    gin.H{},
-		})
-		return
-	}
-
-	// Find user by token.UserID
-	var user model.User
-	if err := database.DB.Where("id = ?", token.UserID).First(&user).Error; err != nil {
-		c.JSON(http.StatusUnauthorized, gin.H{
-			"status":  "fail",
-			"message": "user not found",
-			"data":    gin.H{},
+			"success": false,
+			"error":   err.Error(),
 		})
 		return
 	}
@@ -1272,41 +1054,14 @@ func DownVoteCommentHandler(c *gin.Context) {
 		})
 		return
 	}
-
-	// Get token from Authorization header
-	authHeader := c.GetHeader("Authorization")
-	if authHeader == "" || len(authHeader) < 8 || authHeader[:7] != "Bearer " {
+	user, err := helper.GetFirebaseUser(c)
+	if err != nil {
 		c.JSON(http.StatusUnauthorized, gin.H{
-			"status":  "fail",
-			"message": "invalid authorization header",
-			"data":    gin.H{},
+			"success": false,
+			"error":   err.Error(),
 		})
 		return
 	}
-	tokenStr := authHeader[7:]
-
-	// Find token in DB
-	var token model.Token
-	if err := database.DB.Where("token = ?", tokenStr).First(&token).Error; err != nil {
-		c.JSON(http.StatusUnauthorized, gin.H{
-			"status":  "fail",
-			"message": "invalid token",
-			"data":    gin.H{},
-		})
-		return
-	}
-
-	// Find user by token.UserID
-	var user model.User
-	if err := database.DB.Where("id = ?", token.UserID).First(&user).Error; err != nil {
-		c.JSON(http.StatusUnauthorized, gin.H{
-			"status":  "fail",
-			"message": "user not found",
-			"data":    gin.H{},
-		})
-		return
-	}
-
 	// Check if user already voted
 	var vote model.CommentVote
 	if err := database.DB.Where("comment_id = ? AND user_id = ?", commentID, user.ID).First(&vote).Error; err == nil {
@@ -1368,37 +1123,11 @@ func NeutralVoteCommentHandler(c *gin.Context) {
 		})
 		return
 	}
-
-	// Get token from Authorization header
-	authHeader := c.GetHeader("Authorization")
-	if authHeader == "" || len(authHeader) < 8 || authHeader[:7] != "Bearer " {
+	user, err := helper.GetFirebaseUser(c)
+	if err != nil {
 		c.JSON(http.StatusUnauthorized, gin.H{
-			"status":  "fail",
-			"message": "invalid authorization header",
-			"data":    gin.H{},
-		})
-		return
-	}
-	tokenStr := authHeader[7:]
-
-	// Find token in DB
-	var token model.Token
-	if err := database.DB.Where("token = ?", tokenStr).First(&token).Error; err != nil {
-		c.JSON(http.StatusUnauthorized, gin.H{
-			"status":  "fail",
-			"message": "invalid token",
-			"data":    gin.H{},
-		})
-		return
-	}
-
-	// Find user by token.UserID
-	var user model.User
-	if err := database.DB.Where("id = ?", token.UserID).First(&user).Error; err != nil {
-		c.JSON(http.StatusUnauthorized, gin.H{
-			"status":  "fail",
-			"message": "user not found",
-			"data":    gin.H{},
+			"success": false,
+			"error":   err.Error(),
 		})
 		return
 	}
