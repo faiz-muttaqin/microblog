@@ -87,7 +87,7 @@
   "info": {
     "description": "API Documentation for microblog",
     "title": "microblog",
-    "version": "0.0.29"
+    "version": "0.0.30"
   },
   "openapi": "3.0.4",
   "paths": {

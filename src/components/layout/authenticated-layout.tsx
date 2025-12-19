@@ -1,10 +1,7 @@
 import { Outlet } from '@tanstack/react-router'
-import { getCookie } from '@/lib/cookies'
-import { cn } from '@/lib/utils'
-import { LayoutProvider } from '@/context/layout-provider'
 import { SearchProvider } from '@/context/search-provider'
-import { SidebarInset, SidebarProvider } from '@/components/ui/sidebar'
 import { AppSidebar } from '@/components/layout/app-sidebar'
+import { useSidebar } from '@/components/ui/sidebar'
 import { SkipToMain } from '@/components/SkipToMain'
 import { Header } from '@/components/layout/header'
 import { ConfigDrawer } from '@/components/ConfigDrawer'
@@ -17,44 +14,32 @@ type AuthenticatedLayoutProps = {
 }
 
 export function AuthenticatedLayout({ children }: AuthenticatedLayoutProps) {
-  const defaultOpen = getCookie('sidebar_state') !== 'false'
+  const { state, isMobile } = useSidebar()
+
+  const sidebarSizeVar = state === 'expanded' ? 'var(--sidebar-width)' : 'var(--sidebar-width-icon)'
+  const mainStyle: React.CSSProperties = isMobile
+    ? { width: '100%' }
+    : { width: `calc(100% - ${sidebarSizeVar})` }
+
   return (
     <SearchProvider>
-      <LayoutProvider>
-        <SidebarProvider defaultOpen={defaultOpen}>
-          <SkipToMain />
-          <AppSidebar />
-          <SidebarInset
-            className={cn(
-              // Set content container, so we can use container queries
-              '@container/content',
+      <SkipToMain />
+      <AppSidebar />
 
-              // If layout is fixed, set the height
-              // to 100svh to prevent overflow
-              'has-data-[layout=fixed]:h-svh',
-
-              // If layout is fixed and sidebar is inset,
-              // set the height to 100svh - spacing (total margins) to prevent overflow
-              'peer-data-[variant=inset]:has-data-[layout=fixed]:h-[calc(100svh-(var(--spacing)*4))]'
-            )}
-          >
-            {children ??
-              <>
-                <Header>
-                  {/* <TopNav links={topNav} /> */}
-                  <div className='ms-auto flex items-center space-x-4'>
-                    <Search />
-                    <ThemeSwitch />
-                    <ConfigDrawer />
-                    <ProfileDropdown />
-                  </div>
-                </Header>
-                <Outlet />
-              </>
-            }
-          </SidebarInset>
-        </SidebarProvider>
-      </LayoutProvider>
+      {children ??
+        <div className="absolute right-0" style={mainStyle}>
+          <Header>
+            {/* <TopNav links={topNav} /> */}
+            <div className='ms-auto flex items-center space-x-4'>
+              <Search />
+              <ThemeSwitch />
+              <ConfigDrawer />
+              <ProfileDropdown />
+            </div>
+          </Header>
+          <Outlet />
+        </div>
+      }
     </SearchProvider>
   )
 }

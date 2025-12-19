@@ -13,11 +13,16 @@ import { handleServerError } from '@/lib/handle-server-error'
 import { DirectionProvider } from './context/direction-provider'
 import { FontProvider } from './context/font-provider'
 import { ThemeProvider } from './context/theme-provider'
+
+import { getCookie } from '@/lib/cookies'
+import { SidebarInset, SidebarProvider } from '@/components/ui/sidebar'
 // Generated Routes
 import { routeTree } from './routeTree.gen'
 // Styles
 import './styles/index.css'
 import { AuthProvider } from '@/hooks/auth-provider'
+import { cn } from './lib/utils'
+import { LayoutProvider } from './context/layout-provider'
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -92,17 +97,38 @@ declare module '@tanstack/react-router' {
 // Render the app
 const rootElement = document.getElementById('root')!
 if (!rootElement.innerHTML) {
+  const defaultOpen = getCookie('sidebar_state') !== 'false'
   const root = ReactDOM.createRoot(rootElement)
   root.render(
     <StrictMode>
       <QueryClientProvider client={queryClient}>
         <ThemeProvider>
           <FontProvider>
-            <DirectionProvider>
-              <AuthProvider>
-                <RouterProvider router={router} />
-              </AuthProvider>
-            </DirectionProvider>
+            <LayoutProvider>
+              <SidebarProvider defaultOpen={defaultOpen}>
+                <SidebarInset
+                  className={cn(
+                    // Set content container, so we can use container queries
+                    '@container/content',
+
+                    // If layout is fixed, set the height
+                    // to 100svh to prevent overflow
+                    'has-data-[layout=fixed]:h-svh',
+
+                    // If layout is fixed and sidebar is inset,
+                    // set the height to 100svh - spacing (total margins) to prevent overflow
+                    'peer-data-[variant=inset]:has-data-[layout=fixed]:h-[calc(100svh-(var(--spacing)*4))]'
+                  )}
+                >
+
+                  <DirectionProvider>
+                    <AuthProvider>
+                      <RouterProvider router={router} />
+                    </AuthProvider>
+                  </DirectionProvider>
+                </SidebarInset>
+              </SidebarProvider>
+            </LayoutProvider>
           </FontProvider>
         </ThemeProvider>
       </QueryClientProvider>

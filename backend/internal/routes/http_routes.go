@@ -162,20 +162,6 @@ func LoginHandler(c *gin.Context) {
 	}
 
 	tokenStr := RandString(64)
-	// token := model.Token{
-	// 	ID:       uuid.New().String(),
-	// 	UserID:   user.ID,
-	// 	CreateAt: time.Now(),
-	// 	Token:    tokenStr,
-	// }
-	// if err := database.DB.Create(&token).Error; err != nil {
-	// 	c.JSON(http.StatusInternalServerError, gin.H{
-	// 		"status":  "fail",
-	// 		"message": "failed to save token",
-	// 		"data":    gin.H{},
-	// 	})
-	// 	return
-	// }
 
 	c.JSON(http.StatusOK, gin.H{
 		"status":  "success",

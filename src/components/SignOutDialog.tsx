@@ -6,9 +6,10 @@ import { toast } from 'sonner'
 interface SignOutDialogProps {
   open: boolean
   onOpenChange: (open: boolean) => void
+  onAuthDialogChange?: (state: "signin" | "signup" | null) => void
 }
 
-export function SignOutDialog({ open, onOpenChange }: SignOutDialogProps) {
+export function SignOutDialog({ open, onOpenChange,onAuthDialogChange }: SignOutDialogProps) {
   const navigate = useNavigate()
   const location = useLocation()
   const { signOut } = useAuth()
@@ -18,11 +19,18 @@ export function SignOutDialog({ open, onOpenChange }: SignOutDialogProps) {
       await signOut()
       // Preserve current location for redirect after sign-in
       const currentPath = location.href
+      let relatedPath = '/sign-in'
+      if (!currentPath.startsWith('/dashboard')) {
+        // Remove origin for relative path
+        relatedPath = location.href
+      }
       navigate({
-        to: '/sign-in',
+        to: relatedPath,
         search: { redirect: currentPath },
         replace: true,
       })
+      onOpenChange(false)
+      onAuthDialogChange?.(null)
       toast.success('Signed out successfully')
     } catch (error) {
       toast.error('Failed to sign out')

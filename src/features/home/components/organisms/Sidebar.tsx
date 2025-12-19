@@ -6,7 +6,7 @@ const navItems = [
     { name: 'Home', href: '/', icon: Home },
     { name: 'Threads', href: '/threads', icon: Hash },
     { name: 'Trendings', href: '/leaderboard', icon: Trophy },
-    { name: 'Profile', href: '/profile', icon: UserIcon },
+    { name: 'Profile', href: '/dashboard/profile', icon: UserIcon },
 ]
 
 export const Sidebar = () => {

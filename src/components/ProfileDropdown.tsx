@@ -94,10 +94,10 @@ export function ProfileDropdown() {
                   </Link>
                 </DropdownMenuItem>
                 <DropdownMenuItem asChild>
-                  <Link to='/dashboard/settings'>
+                  {/* <Link to='/dashboard/settings'>
                     Billing
                     <DropdownMenuShortcut>⌘B</DropdownMenuShortcut>
-                  </Link>
+                  </Link> */}
                 </DropdownMenuItem>
                 <DropdownMenuItem asChild>
                   <Link to='/dashboard/settings'>
@@ -105,7 +105,7 @@ export function ProfileDropdown() {
                     <DropdownMenuShortcut>⌘S</DropdownMenuShortcut>
                   </Link>
                 </DropdownMenuItem>
-                <DropdownMenuItem>New Team</DropdownMenuItem>
+                {/* <DropdownMenuItem>New Team</DropdownMenuItem> */}
               </DropdownMenuGroup>
               <DropdownMenuSeparator />
               <DropdownMenuItem variant='destructive' onClick={() => setOpen(true)}>
@@ -117,7 +117,7 @@ export function ProfileDropdown() {
             </DropdownMenuContent>
           </DropdownMenu>
 
-          <SignOutDialog open={!!open} onOpenChange={setOpen} />
+          <SignOutDialog open={!!open} onOpenChange={setOpen} onAuthDialogChange={setAuthOpen} />
         </>
       )}
     </>
