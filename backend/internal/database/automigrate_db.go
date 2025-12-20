@@ -56,7 +56,6 @@ func AutoMigrateDB(db *gorm.DB) error {
 	}
 	// Auto migrate all tables
 	if err := db.AutoMigrate(
-		&model.Token{},
 		&model.Thread{},
 		&model.Comment{},
 		&model.ThreadVote{},
@@ -85,7 +84,7 @@ func AutoMigrateDB(db *gorm.DB) error {
 			Body:      "This is your first thread. Feel free to post and comment.",
 			Category:  "general",
 			CreatedAt: time.Now(),
-			OwnerID:   dummyUser.ID,
+			UserID:    dummyUser.ID,
 		}
 		if err := db.Create(&dummyThread).Error; err != nil {
 			return fmt.Errorf("failed creating dummy thread: %w", err)
@@ -95,7 +94,7 @@ func AutoMigrateDB(db *gorm.DB) error {
 		dummyComment := model.Comment{
 			Content:   "Say hello to everyone!",
 			CreatedAt: time.Now(),
-			OwnerID:   dummyUser.ID,
+			UserID:    dummyUser.ID,
 			ThreadID:  dummyThread.ID,
 		}
 		if err := db.Create(&dummyComment).Error; err != nil {

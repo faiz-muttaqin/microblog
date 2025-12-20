@@ -1,9 +1,14 @@
 // Base API Response wrapper
 export interface ApiResponse<T = unknown> {
   success: boolean
-  data?: T
-  error?: string
   message?: string
+  draw?: number
+  recordsTotal?: number
+  recordsFiltered?: number
+  data?: T
+  table?: Record<string, unknown>
+  error?: string
+  errors?: Record<string, string[] | string> | string[]
 }
 
 // Paginated Response

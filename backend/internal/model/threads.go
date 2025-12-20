@@ -7,31 +7,22 @@ import (
 	"gorm.io/gorm"
 )
 
-// type Token struct {
-// 	ID       string    `json:"id" gorm:"primaryKey;column:id;size:36"`
-// 	UserID   string    `json:"user_id" gorm:"column:user_id;size:36"`
-// 	CreateAt time.Time `json:"created_at" gorm:"autoCreateTime;column:created_at"`
-// 	Token    string    `json:"token" gorm:"column:token;size:255;uniqueIndex"`
-// }
-
-// func (t *Token) BeforeCreate(tx *gorm.DB) error {
-// 	if t.ID == "" {
-// 		t.ID = uuid.New().String()
-// 	}
-// 	return nil
-// }
-
 type Thread struct {
-	ID        string       `json:"id" gorm:"primaryKey;column:id;size:36"`
-	Title     string       `json:"title" gorm:"column:title;size:255"`
-	Body      string       `json:"body" gorm:"column:body;type:text"`
-	Category  string       `json:"category" gorm:"column:category;size:100"`
-	CreatedAt time.Time    `json:"createdAt" gorm:"column:created_at"`
-	UpdatedAt time.Time    `json:"updatedAt" gorm:"column:updated_at"`
-	OwnerID   string       `json:"owner_id" gorm:"column:owner_id;size:36"`
-	Owner     User         `json:"owner" gorm:"foreignKey:OwnerID"`
-	Comments  []Comment    `json:"comments" gorm:"foreignKey:ThreadID"`
-	Votes     []ThreadVote `json:"votes" gorm:"foreignKey:ThreadID"`
+	ID             string       `json:"id" gorm:"primaryKey;column:id;size:36" ui:"sortable"`
+	Title          string       `json:"title" gorm:"column:title;size:255" ui:"creatable;visible;visibility;editable;filterable;;sortable"`
+	Body           string       `json:"body" gorm:"column:body;type:text" ui:"creatable;visible;visibility;editable;filterable;;sortable"`
+	Category       string       `json:"category" gorm:"column:category;size:100" ui:"creatable;visible;visibility;editable;filterable;;sortable"`
+	CreatedAt      time.Time    `json:"created_at" gorm:"column:created_at" ui:"creatable;visible;visibility;editable;filterable;;sortable"`
+	UpdatedAt      time.Time    `json:"updated_at" gorm:"column:updated_at" ui:"creatable;visible;visibility;editable;filterable;;sortable"`
+	UserID         string       `json:"user_id" gorm:"column:user_id;size:36" ui:"creatable;visible;visibility;editable;filterable;;sortable"`
+	User           User         `json:"user" gorm:"foreignKey:UserID" ui:"creatable;visible;visibility;editable;filterable;;sortable"`
+	TotalUpVotes   int          `json:"total_up_votes" gorm:"column:total_up_votes" ui:"creatable;visible;visibility;editable;filterable;;sortable"`
+	TotalDownVotes int          `json:"total_down_votes" gorm:"column:total_down_votes" ui:"creatable;visible;visibility;editable;filterable;;sortable"`
+	UpVotedByMe    bool         `json:"up_voted_by_me" gorm:"-" ui:"visible;sortable"`
+	DownVotedByMe  bool         `json:"down_voted_by_me" gorm:"-" ui:"visible;sortable"`
+	TotalComments  int          `json:"total_comments" gorm:"column:total_comments" ui:"creatable;visible;visibility;editable;filterable;;sortable"`
+	Votes          []ThreadVote `json:"votes" gorm:"foreignKey:ThreadID" ui:"visible;sortable"`
+	Comments       []Comment    `json:"comments" gorm:"foreignKey:ThreadID" ui:"visible;sortable"`
 }
 
 func (t *Thread) BeforeCreate(tx *gorm.DB) error {
@@ -41,15 +32,24 @@ func (t *Thread) BeforeCreate(tx *gorm.DB) error {
 	return nil
 }
 
+// TableName overrides the default table name for Thread model
+func (Thread) TableName() string {
+	return "threads"
+}
+
 type Comment struct {
-	ID        string        `json:"id" gorm:"primaryKey;column:id;size:36"`
-	Content   string        `json:"content" gorm:"column:content;type:text"`
-	CreatedAt time.Time     `json:"createdAt" gorm:"column:created_at"`
-	UpdatedAt time.Time     `json:"updatedAt" gorm:"column:updated_at"`
-	OwnerID   string        `json:"owner_id" gorm:"column:owner_id;size:36"`
-	Owner     User          `json:"owner" gorm:"foreignKey:OwnerID"`
-	ThreadID  string        `json:"thread_id" gorm:"column:thread_id;size:36"`
-	Votes     []CommentVote `json:"votes" gorm:"foreignKey:CommentID"`
+	ID             string        `json:"id" gorm:"primaryKey;column:id;size:36"`
+	ThreadID       string        `json:"thread_id" gorm:"column:thread_id;size:36"`
+	UserID         string        `json:"user_id" gorm:"column:user_id;size:36"`
+	User           User          `json:"user" gorm:"foreignKey:UserID"`
+	Content        string        `json:"content" gorm:"column:content;type:text"`
+	CreatedAt      time.Time     `json:"createdAt" gorm:"column:created_at"`
+	UpdatedAt      time.Time     `json:"updatedAt" gorm:"column:updated_at"`
+	TotalUpVotes   int           `json:"total_up_votes" gorm:"column:total_up_votes" ui:"visible;sortable"`
+	TotalDownVotes int           `json:"total_down_votes" gorm:"column:total_down_votes" ui:"visible;sortable"`
+	UpVotedByMe    bool          `json:"up_voted_by_me" gorm:"-" ui:"visible;sortable"`
+	DownVotedByMe  bool          `json:"down_voted_by_me" gorm:"-" ui:"visible;sortable"`
+	Votes          []CommentVote `json:"votes" gorm:"foreignKey:CommentID"`
 }
 
 func (c *Comment) BeforeCreate(tx *gorm.DB) error {
@@ -57,6 +57,11 @@ func (c *Comment) BeforeCreate(tx *gorm.DB) error {
 		c.ID = uuid.New().String()
 	}
 	return nil
+}
+
+// TableName overrides the default table name for Comment model
+func (Comment) TableName() string {
+	return "comments"
 }
 
 type ThreadVote struct {
@@ -73,6 +78,11 @@ func (tv *ThreadVote) BeforeCreate(tx *gorm.DB) error {
 	return nil
 }
 
+// TableName overrides the default table name for ThreadVote model
+func (ThreadVote) TableName() string {
+	return "thread_votes"
+}
+
 type CommentVote struct {
 	ID        string `json:"id" gorm:"primaryKey;column:id;size:36"`
 	CommentID string `json:"comment_id" gorm:"column:comment_id;size:36"`
@@ -85,4 +95,9 @@ func (cv *CommentVote) BeforeCreate(tx *gorm.DB) error {
 		cv.ID = uuid.New().String()
 	}
 	return nil
+}
+
+// TableName overrides the default table name for CommentVote model
+func (CommentVote) TableName() string {
+	return "comment_votes"
 }

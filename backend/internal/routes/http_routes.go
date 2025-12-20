@@ -5,13 +5,13 @@ import (
 	"microblog/backend/internal/handler"
 	"microblog/backend/internal/helper"
 	"microblog/backend/internal/model"
-	"microblog/backend/pkg/types"
 	"microblog/backend/pkg/util"
 	"net/http"
 	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
+	"github.com/sirupsen/logrus"
 )
 
 var R *gin.Engine
@@ -33,18 +33,19 @@ func Routes() {
 	// r.DELETE("/users", handler.DELETE_DEFAULT_TableDataHandler(database.DB, &model.User{}))
 	// backendAPI.POST("/register", RegisterHandler)
 	// backendAPI.POST("/login", LoginHandler)
-	backendAPI.GET("/users", GetAllUsersHandler)
+	backendAPI.GET("/users", handler.GET_DEFAULT_TABLE(database.DB, &model.User{}, []string{"UserRole"}))
 	backendAPI.Any("/users/me", GetOwnProfileHandler)
 	// Thread endpoints
-	backendAPI.GET("/threads", GetAllThreadsHandler)
+	backendAPI.GET("/threads", handler.GET_THREADS_HANDLER(database.DB, []string{"User"}))
 	backendAPI.POST("/threads", CreateThreadHandler)
 	backendAPI.GET("/threads/:threadId", GetThreadDetailHandler)
-	backendAPI.POST("/threads/:threadId/comments", CreateThreadCommentHandler)
 	backendAPI.POST("/threads/:threadId/up-vote", UpVoteThreadHandler)
 	backendAPI.POST("/threads/:threadId/down-vote", DownVoteThreadHandler)
 	backendAPI.POST("/threads/:threadId/neutral-vote", NeutralVoteThreadHandler)
 
 	// Comment vote endpoints
+	backendAPI.GET("/threads/:threadId/comments", handler.GET_THREADS_ID_COMMENTS_HANDLER(database.DB, []string{"User"}))
+	backendAPI.POST("/threads/:threadId/comments", CreateThreadCommentHandler)
 	backendAPI.POST("/threads/:threadId/comments/:commentId/up-vote", UpVoteCommentHandler)
 	backendAPI.POST("/threads/:threadId/comments/:commentId/down-vote", DownVoteCommentHandler)
 	backendAPI.POST("/threads/:threadId/comments/:commentId/neutral-vote", NeutralVoteCommentHandler)
@@ -61,123 +62,13 @@ func Routes() {
 	backendAPI.GET("/leaderboards", GetLeaderboardsHandler)
 }
 
-// Example handler: Register
-func RegisterHandler(c *gin.Context) {
-	type RegisterRequest struct {
-		Name     string `json:"name" binding:"required"`
-		Email    string `json:"email" binding:"required,email"`
-		Password string `json:"password" binding:"required"`
-	}
-
-	var req RegisterRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{
-			"status":  "fail",
-			"message": err.Error(),
-		})
-		return
-	}
-
-	// Check for duplicate email
-	var existingUser model.User
-	if err := database.DB.Where("email = ?", req.Email).First(&existingUser).Error; err == nil {
-		c.JSON(http.StatusConflict, gin.H{
-			"status":  "fail",
-			"message": "email already registered",
-		})
-		return
-	}
-
-	// Generate avatar URL
-	avatarURL := "https://ui-avatars.com/api/?name=" + req.Name + "&background=random"
-
-	// Create user object
-	user := model.User{
-		ID:       uuid.New().String(),
-		Name:     req.Name,
-		Email:    types.Email(req.Email),
-		Avatar:   types.Avatar(avatarURL),
-		Password: types.Password(req.Password), // In production, hash the password
-	}
-
-	// Save to DB
-	if err := database.DB.Create(&user).Error; err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{
-			"status":  "fail",
-			"message": "failed to create user",
-		})
-		return
-	}
-
-	c.JSON(http.StatusOK, gin.H{
-		"status":  "success",
-		"message": "user created",
-		"data": gin.H{
-			"user": gin.H{
-				"id":     user.ID,
-				"name":   user.Name,
-				"email":  user.Email,
-				"avatar": user.Avatar,
-			},
-		},
-	})
-}
-
-// RandString generates a random string of n length
-func RandString(n int) string {
-	letters := []rune("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789")
-	b := make([]rune, n)
-	for i := range b {
-		b[i] = letters[time.Now().UnixNano()%int64(len(letters))]
-		time.Sleep(time.Nanosecond) // ensure different seed
-	}
-	return string(b)
-}
-
-// Example handler: Login
-func LoginHandler(c *gin.Context) {
-	type LoginRequest struct {
-		Email    string `json:"email" binding:"required,email"`
-		Password string `json:"password" binding:"required"`
-	}
-
-	var req LoginRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{
-			"status":  "fail",
-			"message": err.Error(),
-			"data":    gin.H{},
-		})
-		return
-	}
-
-	var user model.User
-	if err := database.DB.Where("email = ? AND password = ?", req.Email, req.Password).First(&user).Error; err != nil {
-		c.JSON(http.StatusUnauthorized, gin.H{
-			"status":  "fail",
-			"message": "email or password is wrong",
-			"data":    gin.H{},
-		})
-		return
-	}
-
-	tokenStr := RandString(64)
-
-	c.JSON(http.StatusOK, gin.H{
-		"status":  "success",
-		"message": "user logged in",
-		"data": gin.H{
-			"token": tokenStr,
-		},
-	})
-}
-
 // Example handler: Get all users
 func GetAllUsersHandler(c *gin.Context) {
 	var users []model.User
 	if err := database.DB.Find(&users).Error; err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
-			"status":  "fail",
+			"success": false,
+			"error":   err.Error(),
 			"message": "failed to get users",
 			"data":    gin.H{},
 		})
@@ -231,7 +122,8 @@ func GetAllThreadsHandler(c *gin.Context) {
 	var threads []model.Thread
 	if err := database.DB.Preload("Comments").Preload("Votes").Find(&threads).Error; err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
-			"status":  "fail",
+			"success": false,
+			"error":   err.Error(),
 			"message": "failed to get threads",
 			"data":    gin.H{},
 		})
@@ -256,7 +148,7 @@ func GetAllThreadsHandler(c *gin.Context) {
 			"body":          t.Body,
 			"category":      t.Category,
 			"createdAt":     t.CreatedAt,
-			"ownerId":       t.OwnerID,
+			"userId":        t.UserID,
 			"totalComments": len(t.Comments),
 			"upVotesBy":     upVotesBy,
 			"downVotesBy":   downVotesBy,
@@ -264,7 +156,7 @@ func GetAllThreadsHandler(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{
-		"status":  "success",
+		"success": true,
 		"message": "threads retrieved",
 		"data": gin.H{
 			"threads": result,
@@ -292,7 +184,8 @@ func CreateThreadHandler(c *gin.Context) {
 	var req CreateThreadRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{
-			"status":  "fail",
+			"success": false,
+			"error":   err.Error(),
 			"message": err.Error(),
 			"data":    gin.H{},
 		})
@@ -306,13 +199,14 @@ func CreateThreadHandler(c *gin.Context) {
 		Body:      req.Body,
 		Category:  req.Category,
 		CreatedAt: time.Now(),
-		OwnerID:   user.ID,
+		UserID:    user.ID,
 	}
 
 	// Save to DB
 	if err := database.DB.Create(&thread).Error; err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
-			"status":  "fail",
+			"success": false,
+			"error":   err.Error(),
 			"message": "failed to create thread",
 			"data":    gin.H{},
 		})
@@ -320,7 +214,7 @@ func CreateThreadHandler(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{
-		"status":  "success",
+		"success": true,
 		"message": "thread created",
 		"data": gin.H{
 			"thread": gin.H{
@@ -354,16 +248,18 @@ func UpdateThreadHandler(c *gin.Context) {
 	var thread model.Thread
 	if err := database.DB.Where("id = ?", threadID).First(&thread).Error; err != nil {
 		c.JSON(http.StatusNotFound, gin.H{
-			"status":  "fail",
+			"success": false,
+			"error":   err.Error(),
 			"message": "thread not found",
 			"data":    gin.H{},
 		})
 		return
 	}
 
-	if thread.OwnerID != userData.ID {
+	if thread.UserID != userData.ID {
 		c.JSON(http.StatusForbidden, gin.H{
-			"status":  "fail",
+			"success": false,
+			"error":   "Forbidden",
 			"message": "not authorized to update this thread",
 			"data":    gin.H{},
 		})
@@ -378,7 +274,8 @@ func UpdateThreadHandler(c *gin.Context) {
 	var req UpdateThreadRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{
-			"status":  "fail",
+			"success": false,
+			"error":   err.Error(),
 			"message": err.Error(),
 			"data":    gin.H{},
 		})
@@ -402,7 +299,8 @@ func UpdateThreadHandler(c *gin.Context) {
 		thread.UpdatedAt = time.Now()
 		if err := database.DB.Save(&thread).Error; err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{
-				"status":  "fail",
+				"success": false,
+				"error":   err.Error(),
 				"message": "failed to update thread",
 				"data":    gin.H{},
 			})
@@ -411,7 +309,7 @@ func UpdateThreadHandler(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{
-		"status":  "success",
+		"success": true,
 		"message": "thread updated",
 		"data": gin.H{
 			"thread": gin.H{
@@ -421,7 +319,7 @@ func UpdateThreadHandler(c *gin.Context) {
 				"category":  thread.Category,
 				"createdAt": thread.CreatedAt.Format(time.RFC3339),
 				"updatedAt": thread.UpdatedAt.Format(time.RFC3339),
-				"ownerId":   thread.OwnerID,
+				"userId":    thread.UserID,
 			},
 		},
 	})
@@ -430,7 +328,7 @@ func UpdateThreadHandler(c *gin.Context) {
 func DeleteThreadHandler(c *gin.Context) {
 	threadID := c.Param("threadId")
 
-	userData, err := helper.GetFirebaseUser(c)
+	user, err := helper.GetFirebaseUser(c)
 	if err != nil {
 		c.JSON(http.StatusUnauthorized, gin.H{
 			"success": false,
@@ -442,16 +340,18 @@ func DeleteThreadHandler(c *gin.Context) {
 	var thread model.Thread
 	if err := database.DB.Where("id = ?", threadID).First(&thread).Error; err != nil {
 		c.JSON(http.StatusNotFound, gin.H{
-			"status":  "fail",
+			"success": false,
+			"error":   err.Error(),
 			"message": "thread not found",
 			"data":    gin.H{},
 		})
 		return
 	}
 
-	if thread.OwnerID != userData.ID {
+	if thread.UserID != user.ID {
 		c.JSON(http.StatusForbidden, gin.H{
-			"status":  "fail",
+			"success": false,
+			"error":   err.Error(),
 			"message": "not authorized to delete this thread",
 			"data":    gin.H{},
 		})
@@ -460,7 +360,8 @@ func DeleteThreadHandler(c *gin.Context) {
 
 	if err := database.DB.Delete(&thread).Error; err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
-			"status":  "fail",
+			"success": false,
+			"error":   err.Error(),
 			"message": "failed to delete thread",
 			"data":    gin.H{},
 		})
@@ -468,7 +369,7 @@ func DeleteThreadHandler(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{
-		"status":  "success",
+		"success": true,
 		"message": "thread deleted",
 		"data":    gin.H{},
 	})
@@ -477,7 +378,7 @@ func DeleteThreadHandler(c *gin.Context) {
 func UpdateCommentHandler(c *gin.Context) {
 	threadID := c.Param("threadId")
 	commentID := c.Param("commentId")
-	userData, err := helper.GetFirebaseUser(c)
+	user, err := helper.GetFirebaseUser(c)
 	if err != nil {
 		c.JSON(http.StatusUnauthorized, gin.H{
 			"success": false,
@@ -489,16 +390,18 @@ func UpdateCommentHandler(c *gin.Context) {
 	var comment model.Comment
 	if err := database.DB.Where("id = ? AND thread_id = ?", commentID, threadID).First(&comment).Error; err != nil {
 		c.JSON(http.StatusNotFound, gin.H{
-			"status":  "fail",
+			"success": false,
+			"error":   err.Error(),
 			"message": "comment not found",
 			"data":    gin.H{},
 		})
 		return
 	}
 
-	if comment.OwnerID != userData.ID {
+	if comment.UserID != user.ID {
 		c.JSON(http.StatusForbidden, gin.H{
-			"status":  "fail",
+			"success": false,
+			"error":   "Forbidden",
 			"message": "not authorized to update this comment",
 			"data":    gin.H{},
 		})
@@ -511,7 +414,8 @@ func UpdateCommentHandler(c *gin.Context) {
 	var req UpdateCommentRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{
-			"status":  "fail",
+			"success": false,
+			"error":   err.Error(),
 			"message": err.Error(),
 			"data":    gin.H{},
 		})
@@ -523,7 +427,8 @@ func UpdateCommentHandler(c *gin.Context) {
 		comment.UpdatedAt = time.Now()
 		if err := database.DB.Save(&comment).Error; err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{
-				"status":  "fail",
+				"success": false,
+				"error":   err.Error(),
 				"message": "failed to update comment",
 				"data":    gin.H{},
 			})
@@ -532,7 +437,7 @@ func UpdateCommentHandler(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{
-		"status":  "success",
+		"success": true,
 		"message": "comment updated",
 		"data": gin.H{
 			"comment": gin.H{
@@ -540,7 +445,7 @@ func UpdateCommentHandler(c *gin.Context) {
 				"content":   comment.Content,
 				"createdAt": comment.CreatedAt.Format(time.RFC3339),
 				"updatedAt": comment.UpdatedAt.Format(time.RFC3339),
-				"ownerId":   comment.OwnerID,
+				"userId":    comment.UserID,
 				"threadId":  comment.ThreadID,
 			},
 		},
@@ -550,7 +455,7 @@ func UpdateCommentHandler(c *gin.Context) {
 func DeleteCommentHandler(c *gin.Context) {
 	threadID := c.Param("threadId")
 	commentID := c.Param("commentId")
-	userData, err := helper.GetFirebaseUser(c)
+	user, err := helper.GetFirebaseUser(c)
 	if err != nil {
 		c.JSON(http.StatusUnauthorized, gin.H{
 			"success": false,
@@ -562,16 +467,18 @@ func DeleteCommentHandler(c *gin.Context) {
 	var comment model.Comment
 	if err := database.DB.Where("id = ? AND thread_id = ?", commentID, threadID).First(&comment).Error; err != nil {
 		c.JSON(http.StatusNotFound, gin.H{
-			"status":  "fail",
+			"success": false,
+			"error":   err.Error(),
 			"message": "comment not found",
 			"data":    gin.H{},
 		})
 		return
 	}
 
-	if comment.OwnerID != userData.ID {
+	if comment.UserID != user.ID {
 		c.JSON(http.StatusForbidden, gin.H{
-			"status":  "fail",
+			"success": false,
+			"error":   "Forbidden",
 			"message": "not authorized to delete this comment",
 			"data":    gin.H{},
 		})
@@ -580,7 +487,8 @@ func DeleteCommentHandler(c *gin.Context) {
 
 	if err := database.DB.Delete(&comment).Error; err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
-			"status":  "fail",
+			"success": false,
+			"error":   err.Error(),
 			"message": "failed to delete comment",
 			"data":    gin.H{},
 		})
@@ -588,7 +496,7 @@ func DeleteCommentHandler(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{
-		"status":  "success",
+		"success": true,
 		"message": "comment deleted",
 		"data":    gin.H{},
 	})
@@ -597,84 +505,30 @@ func DeleteCommentHandler(c *gin.Context) {
 // Get thread detail
 func GetThreadDetailHandler(c *gin.Context) {
 	threadID := c.Param("threadId")
+	// Preload User and Comments (with their Users)
 	var thread model.Thread
-	// Preload Owner and Comments (with their Owners)
-	if err := database.DB.Preload("Owner").
-		Preload("Comments.Owner").
+	if err := database.DB.Preload("User").
+		Preload("Comments.User").
 		Preload("Comments.Votes").
 		Preload("Votes").
 		Where("id = ?", threadID).
 		First(&thread).Error; err != nil {
 		c.JSON(http.StatusNotFound, gin.H{
-			"status":  "fail",
+			"success": false,
+			"error":   err.Error(),
 			"message": "thread not found",
 		})
 		return
 	}
 
-	upVotesBy := []string{}
-	downVotesBy := []string{}
-	for _, v := range thread.Votes {
-		switch v.VoteType {
-		case "up":
-			upVotesBy = append(upVotesBy, v.UserID)
-		case "down":
-			downVotesBy = append(downVotesBy, v.UserID)
-		}
-	}
-
-	comments := []gin.H{}
-	for _, cm := range thread.Comments {
-		commentUpVotesBy := []string{}
-		commentDownVotesBy := []string{}
-		for _, v := range cm.Votes {
-			switch v.VoteType {
-			case "up":
-				commentUpVotesBy = append(commentUpVotesBy, v.UserID)
-			case "down":
-				commentDownVotesBy = append(commentDownVotesBy, v.UserID)
-			}
-		}
-		comments = append(comments, gin.H{
-			"id":        cm.ID,
-			"content":   cm.Content,
-			"createdAt": cm.CreatedAt.Format(time.RFC3339),
-			"owner": gin.H{
-				"id":     cm.Owner.ID,
-				"name":   cm.Owner.Name,
-				"email":  cm.Owner.Email,
-				"avatar": cm.Owner.Avatar,
-			},
-			"upVotesBy":   commentUpVotesBy,
-			"downVotesBy": commentDownVotesBy,
-		})
-	}
-
 	c.JSON(http.StatusOK, gin.H{
-		"status": "success",
-		"data": gin.H{
-			"detailThread": gin.H{
-				"id":        thread.ID,
-				"title":     thread.Title,
-				"body":      thread.Body,
-				"category":  thread.Category,
-				"createdAt": thread.CreatedAt.Format(time.RFC3339),
-				"owner": gin.H{
-					"id":     thread.Owner.ID,
-					"name":   thread.Owner.Name,
-					"email":  thread.Owner.Email,
-					"avatar": thread.Owner.Avatar,
-				},
-				"upVotesBy":   upVotesBy,
-				"downVotesBy": downVotesBy,
-				"comments":    comments,
-			},
-		},
+		"success": true,
+		"data":    thread,
 	})
 }
 
-// Create thread comment
-func CreateThreadCommentHandler(c *gin.Context) {
+// Get thread comment
+func GetThreadCommentsHandler(c *gin.Context) {
 	// Get thread ID from URL
 	threadID := c.Param("threadId")
 
@@ -682,7 +536,8 @@ func CreateThreadCommentHandler(c *gin.Context) {
 	var thread model.Thread
 	if err := database.DB.Where("id = ?", threadID).First(&thread).Error; err != nil {
 		c.JSON(http.StatusNotFound, gin.H{
-			"status":  "fail",
+			"success": false,
+			"error":   err.Error(),
 			"message": "thread is not found",
 			"data":    gin.H{},
 		})
@@ -704,7 +559,8 @@ func CreateThreadCommentHandler(c *gin.Context) {
 	var req CreateCommentRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{
-			"status":  "fail",
+			"success": false,
+			"error":   err.Error(),
 			"message": err.Error(),
 			"data":    gin.H{},
 		})
@@ -716,14 +572,15 @@ func CreateThreadCommentHandler(c *gin.Context) {
 		ID:        uuid.New().String(),
 		Content:   req.Content,
 		CreatedAt: time.Now(),
-		OwnerID:   user.ID,
+		UserID:    user.ID,
 		ThreadID:  thread.ID,
 	}
 
 	// Save to DB
 	if err := database.DB.Create(&comment).Error; err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
-			"status":  "fail",
+			"success": false,
+			"error":   err.Error(),
 			"message": "failed to create comment",
 			"data":    gin.H{},
 		})
@@ -731,7 +588,86 @@ func CreateThreadCommentHandler(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{
-		"status":  "success",
+		"success": true,
+		"message": "comment created",
+		"data": gin.H{
+			"comment": gin.H{
+				"id":        comment.ID,
+				"content":   comment.Content,
+				"createdAt": comment.CreatedAt.Format(time.RFC3339),
+				"owner": gin.H{
+					"id":     user.ID,
+					"name":   user.Name,
+					"email":  user.Email,
+					"avatar": user.Avatar,
+				},
+			},
+		},
+	})
+}
+
+// Create thread comment
+func CreateThreadCommentHandler(c *gin.Context) {
+	// Get thread ID from URL
+	threadID := c.Param("threadId")
+
+	// Find thread
+	var thread model.Thread
+	if err := database.DB.Where("id = ?", threadID).First(&thread).Error; err != nil {
+		c.JSON(http.StatusNotFound, gin.H{
+			"success": false,
+			"error":   err.Error(),
+			"message": "thread is not found",
+			"data":    gin.H{},
+		})
+		return
+	}
+	user, err := helper.GetFirebaseUser(c)
+	if err != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{
+			"success": false,
+			"error":   err.Error(),
+		})
+		return
+	}
+
+	// Parse request
+	type CreateCommentRequest struct {
+		Content string `json:"content" binding:"required"`
+	}
+	var req CreateCommentRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"success": false,
+			"error":   err.Error(),
+			"message": err.Error(),
+			"data":    gin.H{},
+		})
+		return
+	}
+
+	// Create comment object
+	comment := model.Comment{
+		ID:        uuid.New().String(),
+		Content:   req.Content,
+		CreatedAt: time.Now(),
+		UserID:    user.ID,
+		ThreadID:  thread.ID,
+	}
+
+	// Save to DB
+	if err := database.DB.Create(&comment).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"success": false,
+			"error":   err.Error(),
+			"message": "failed to create comment",
+			"data":    gin.H{},
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"success": true,
 		"message": "comment created",
 		"data": gin.H{
 			"comment": gin.H{
@@ -751,24 +687,25 @@ func CreateThreadCommentHandler(c *gin.Context) {
 
 // Upvote thread
 func UpVoteThreadHandler(c *gin.Context) {
-	// Get thread ID from URL
-	threadID := c.Param("threadId")
-
-	// Validate thread exists
-	var thread model.Thread
-	if err := database.DB.Where("id = ?", threadID).First(&thread).Error; err != nil {
-		c.JSON(http.StatusNotFound, gin.H{
-			"status":  "fail",
-			"message": "thread not found",
-			"data":    gin.H{},
-		})
-		return
-	}
 	user, err := helper.GetFirebaseUser(c)
 	if err != nil {
 		c.JSON(http.StatusUnauthorized, gin.H{
 			"success": false,
 			"error":   err.Error(),
+		})
+		return
+	}
+	// Get thread ID from URL
+	threadID := c.Param("threadId")
+
+	// Validate thread exists
+	var thread model.Thread
+	if err := database.DB.Select("id").Where("id = ?", threadID).First(&thread).Error; err != nil {
+		c.JSON(http.StatusNotFound, gin.H{
+			"success": false,
+			"error":   err.Error(),
+			"message": "thread not found",
+			"data":    gin.H{},
 		})
 		return
 	}
@@ -779,7 +716,8 @@ func UpVoteThreadHandler(c *gin.Context) {
 		vote.VoteType = "up"
 		if err := database.DB.Save(&vote).Error; err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{
-				"status":  "fail",
+				"success": false,
+				"error":   err.Error(),
 				"message": "failed to update vote",
 				"data":    gin.H{},
 			})
@@ -795,16 +733,35 @@ func UpVoteThreadHandler(c *gin.Context) {
 		}
 		if err := database.DB.Create(&vote).Error; err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{
-				"status":  "fail",
+				"success": false,
+				"error":   err.Error(),
 				"message": "failed to create vote",
 				"data":    gin.H{},
 			})
 			return
 		}
+
+	}
+	if err := database.DB.Exec(`
+			UPDATE threads
+			SET 
+			total_up_votes = (
+				SELECT COUNT(*)
+				FROM thread_votes
+				WHERE thread_id = ? AND vote_type = 'up'
+			),
+			total_down_votes = (
+				SELECT COUNT(*)
+				FROM thread_votes
+				WHERE thread_id = ? AND vote_type = 'down'
+			)
+			WHERE id = ?
+		`, threadID, threadID, threadID).Error; err != nil {
+		logrus.Println(err)
 	}
 
 	c.JSON(http.StatusOK, gin.H{
-		"status":  "success",
+		"success": true,
 		"message": "thread up voted",
 		"data": gin.H{
 			"vote": gin.H{
@@ -819,24 +776,25 @@ func UpVoteThreadHandler(c *gin.Context) {
 
 // Downvote thread
 func DownVoteThreadHandler(c *gin.Context) {
-	// Get thread ID from URL
-	threadID := c.Param("threadId")
-
-	// Validate thread exists
-	var thread model.Thread
-	if err := database.DB.Where("id = ?", threadID).First(&thread).Error; err != nil {
-		c.JSON(http.StatusNotFound, gin.H{
-			"status":  "fail",
-			"message": "thread not found",
-			"data":    gin.H{},
-		})
-		return
-	}
 	user, err := helper.GetFirebaseUser(c)
 	if err != nil {
 		c.JSON(http.StatusUnauthorized, gin.H{
 			"success": false,
 			"error":   err.Error(),
+		})
+		return
+	}
+	// Get thread ID from URL
+	threadID := c.Param("threadId")
+
+	// Validate thread exists
+	var thread model.Thread
+	if err := database.DB.Select("id").Where("id = ?", threadID).First(&thread).Error; err != nil {
+		c.JSON(http.StatusNotFound, gin.H{
+			"success": false,
+			"error":   err.Error(),
+			"message": "thread not found",
+			"data":    gin.H{},
 		})
 		return
 	}
@@ -848,7 +806,8 @@ func DownVoteThreadHandler(c *gin.Context) {
 		vote.VoteType = "down"
 		if err := database.DB.Save(&vote).Error; err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{
-				"status":  "fail",
+				"success": false,
+				"error":   err.Error(),
 				"message": "failed to update vote",
 				"data":    gin.H{},
 			})
@@ -864,16 +823,34 @@ func DownVoteThreadHandler(c *gin.Context) {
 		}
 		if err := database.DB.Create(&vote).Error; err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{
-				"status":  "fail",
+				"success": false,
+				"error":   err.Error(),
 				"message": "failed to create vote",
 				"data":    gin.H{},
 			})
 			return
 		}
 	}
+	if err := database.DB.Exec(`
+			UPDATE threads
+			SET 
+			total_up_votes = (
+				SELECT COUNT(*)
+				FROM thread_votes
+				WHERE thread_id = ? AND vote_type = 'up'
+			),
+			total_down_votes = (
+				SELECT COUNT(*)
+				FROM thread_votes
+				WHERE thread_id = ? AND vote_type = 'down'
+			)
+			WHERE id = ?
+		`, threadID, threadID, threadID).Error; err != nil {
+		logrus.Println(err)
+	}
 
 	c.JSON(http.StatusOK, gin.H{
-		"status":  "success",
+		"success": true,
 		"message": "thread down voted",
 		"data": gin.H{
 			"vote": gin.H{
@@ -895,7 +872,8 @@ func NeutralVoteThreadHandler(c *gin.Context) {
 	var thread model.Thread
 	if err := database.DB.Where("id = ?", threadID).First(&thread).Error; err != nil {
 		c.JSON(http.StatusNotFound, gin.H{
-			"status":  "fail",
+			"success": false,
+			"error":   err.Error(),
 			"message": "thread not found",
 			"data":    gin.H{},
 		})
@@ -917,7 +895,8 @@ func NeutralVoteThreadHandler(c *gin.Context) {
 		vote.VoteType = "neutral"
 		if err := database.DB.Save(&vote).Error; err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{
-				"status":  "fail",
+				"success": false,
+				"error":   err.Error(),
 				"message": "failed to update vote",
 				"data":    gin.H{},
 			})
@@ -933,16 +912,34 @@ func NeutralVoteThreadHandler(c *gin.Context) {
 		}
 		if err := database.DB.Create(&vote).Error; err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{
-				"status":  "fail",
+				"success": false,
+				"error":   err.Error(),
 				"message": "failed to create vote",
 				"data":    gin.H{},
 			})
 			return
 		}
 	}
+	if err := database.DB.Exec(`
+			UPDATE threads
+			SET 
+			total_up_votes = (
+				SELECT COUNT(*)
+				FROM thread_votes
+				WHERE thread_id = ? AND vote_type = 'up'
+			),
+			total_down_votes = (
+				SELECT COUNT(*)
+				FROM thread_votes
+				WHERE thread_id = ? AND vote_type = 'down'
+			)
+			WHERE id = ?
+		`, threadID, threadID, threadID).Error; err != nil {
+		logrus.Println(err)
+	}
 
 	c.JSON(http.StatusOK, gin.H{
-		"status":  "success",
+		"success": true,
 		"message": "thread vote neutralized",
 		"data": gin.H{
 			"vote": gin.H{
@@ -957,25 +954,17 @@ func NeutralVoteThreadHandler(c *gin.Context) {
 
 // Upvote comment
 func UpVoteCommentHandler(c *gin.Context) {
-	threadID := c.Param("threadId")
-	commentID := c.Param("commentId")
-
-	// Validate comment exists
-	var comment model.Comment
-	if err := database.DB.Where("id = ? AND thread_id = ?", commentID, threadID).First(&comment).Error; err != nil {
-		c.JSON(http.StatusNotFound, gin.H{
-			"status":  "fail",
-			"message": "comment not found",
-			"data":    gin.H{},
-		})
-		return
-	}
 	user, err := helper.GetFirebaseUser(c)
 	if err != nil {
-		c.JSON(http.StatusUnauthorized, gin.H{
-			"success": false,
-			"error":   err.Error(),
-		})
+		c.JSON(http.StatusUnauthorized, gin.H{"success": false, "error": err.Error()})
+		return
+	}
+	threadID := c.Param("threadId")
+	commentID := c.Param("commentId")
+	// Validate comment exists
+	var comment model.Comment
+	if err := database.DB.Select("id").Where("id = ? AND thread_id = ?", commentID, threadID).First(&comment).Error; err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"success": false, "error": err.Error(), "message": "comment not found", "data": gin.H{}})
 		return
 	}
 
@@ -986,7 +975,8 @@ func UpVoteCommentHandler(c *gin.Context) {
 		vote.VoteType = "up"
 		if err := database.DB.Save(&vote).Error; err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{
-				"status":  "fail",
+				"success": false,
+				"error":   err.Error(),
 				"message": "failed to update vote",
 				"data":    gin.H{},
 			})
@@ -1002,16 +992,33 @@ func UpVoteCommentHandler(c *gin.Context) {
 		}
 		if err := database.DB.Create(&vote).Error; err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{
-				"status":  "fail",
+				"success": false,
+				"error":   err.Error(),
 				"message": "failed to create vote",
 				"data":    gin.H{},
 			})
 			return
 		}
 	}
+	if err := database.DB.Exec(`
+			UPDATE comments SET 
+			total_up_votes = (
+				SELECT COUNT(*)
+				FROM comment_votes
+				WHERE comment_id = ? AND vote_type = 'up'
+			),
+			total_down_votes = (
+				SELECT COUNT(*)
+				FROM comment_votes
+				WHERE comment_id = ? AND vote_type = 'down'
+			)
+			WHERE id = ?
+		`, commentID, commentID, commentID).Error; err != nil {
+		logrus.Println(err)
+	}
 
 	c.JSON(http.StatusOK, gin.H{
-		"status":  "success",
+		"success": true,
 		"message": "thread comment up voted",
 		"data": gin.H{
 			"vote": gin.H{
@@ -1027,25 +1034,18 @@ func UpVoteCommentHandler(c *gin.Context) {
 
 // Downvote comment
 func DownVoteCommentHandler(c *gin.Context) {
+	user, err := helper.GetFirebaseUser(c)
+	if err != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"success": false, "error": err.Error()})
+		return
+	}
 	threadID := c.Param("threadId")
 	commentID := c.Param("commentId")
 
 	// Validate comment exists
 	var comment model.Comment
-	if err := database.DB.Where("id = ? AND thread_id = ?", commentID, threadID).First(&comment).Error; err != nil {
-		c.JSON(http.StatusNotFound, gin.H{
-			"status":  "fail",
-			"message": "comment not found",
-			"data":    gin.H{},
-		})
-		return
-	}
-	user, err := helper.GetFirebaseUser(c)
-	if err != nil {
-		c.JSON(http.StatusUnauthorized, gin.H{
-			"success": false,
-			"error":   err.Error(),
-		})
+	if err := database.DB.Select("id").Where("id = ? AND thread_id = ?", commentID, threadID).First(&comment).Error; err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"success": false, "error": err.Error(), "message": "comment not found", "data": gin.H{}})
 		return
 	}
 	// Check if user already voted
@@ -1055,7 +1055,8 @@ func DownVoteCommentHandler(c *gin.Context) {
 		vote.VoteType = "down"
 		if err := database.DB.Save(&vote).Error; err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{
-				"status":  "fail",
+				"success": false,
+				"error":   err.Error(),
 				"message": "failed to update vote",
 				"data":    gin.H{},
 			})
@@ -1071,16 +1072,32 @@ func DownVoteCommentHandler(c *gin.Context) {
 		}
 		if err := database.DB.Create(&vote).Error; err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{
-				"status":  "fail",
+				"success": false,
+				"error":   err.Error(),
 				"message": "failed to create vote",
 				"data":    gin.H{},
 			})
 			return
 		}
 	}
-
+	if err := database.DB.Exec(`
+			UPDATE comments SET 
+			total_up_votes = (
+				SELECT COUNT(*)
+				FROM comment_votes
+				WHERE comment_id = ? AND vote_type = 'up'
+			),
+			total_down_votes = (
+				SELECT COUNT(*)
+				FROM comment_votes
+				WHERE comment_id = ? AND vote_type = 'down'
+			)
+			WHERE id = ?
+		`, commentID, commentID, commentID).Error; err != nil {
+		logrus.Println(err)
+	}
 	c.JSON(http.StatusOK, gin.H{
-		"status":  "success",
+		"success": true,
 		"message": "thread comment down voted",
 		"data": gin.H{
 			"vote": gin.H{
@@ -1096,25 +1113,18 @@ func DownVoteCommentHandler(c *gin.Context) {
 
 // Neutral vote comment
 func NeutralVoteCommentHandler(c *gin.Context) {
+	user, err := helper.GetFirebaseUser(c)
+	if err != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"success": false, "error": err.Error()})
+		return
+	}
 	threadID := c.Param("threadId")
 	commentID := c.Param("commentId")
 
 	// Validate comment exists
 	var comment model.Comment
-	if err := database.DB.Where("id = ? AND thread_id = ?", commentID, threadID).First(&comment).Error; err != nil {
-		c.JSON(http.StatusNotFound, gin.H{
-			"status":  "fail",
-			"message": "comment not found",
-			"data":    gin.H{},
-		})
-		return
-	}
-	user, err := helper.GetFirebaseUser(c)
-	if err != nil {
-		c.JSON(http.StatusUnauthorized, gin.H{
-			"success": false,
-			"error":   err.Error(),
-		})
+	if err := database.DB.Select("id").Where("id = ? AND thread_id = ?", commentID, threadID).First(&comment).Error; err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"success": false, "error": err.Error(), "message": "comment not found", "data": gin.H{}})
 		return
 	}
 
@@ -1125,7 +1135,8 @@ func NeutralVoteCommentHandler(c *gin.Context) {
 		vote.VoteType = "neutral"
 		if err := database.DB.Save(&vote).Error; err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{
-				"status":  "fail",
+				"success": false,
+				"error":   err.Error(),
 				"message": "failed to update vote",
 				"data":    gin.H{},
 			})
@@ -1141,16 +1152,32 @@ func NeutralVoteCommentHandler(c *gin.Context) {
 		}
 		if err := database.DB.Create(&vote).Error; err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{
-				"status":  "fail",
+				"success": false,
+				"error":   err.Error(),
 				"message": "failed to create vote",
 				"data":    gin.H{},
 			})
 			return
 		}
 	}
-
+	if err := database.DB.Exec(`
+			UPDATE comments SET 
+			total_up_votes = (
+				SELECT COUNT(*)
+				FROM comment_votes
+				WHERE comment_id = ? AND vote_type = 'up'
+			),
+			total_down_votes = (
+				SELECT COUNT(*)
+				FROM comment_votes
+				WHERE comment_id = ? AND vote_type = 'down'
+			)
+			WHERE id = ?
+		`, commentID, commentID, commentID).Error; err != nil {
+		logrus.Println(err)
+	}
 	c.JSON(http.StatusOK, gin.H{
-		"status":  "success",
+		"success": true,
 		"message": "thread comment neutral voted",
 		"data": gin.H{
 			"vote": gin.H{
@@ -1170,7 +1197,8 @@ func GetLeaderboardsHandler(c *gin.Context) {
 	var users []model.User
 	if err := database.DB.Find(&users).Error; err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
-			"status":  "fail",
+			"success": false,
+			"error":   err.Error(),
 			"message": "failed to get users",
 		})
 		return

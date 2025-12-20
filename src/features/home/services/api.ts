@@ -1,20 +1,34 @@
+import type {
+  User,
+  Thread,
+  ThreadDetail,
+  Comment,
+  PaginatedResponse,
+  ThreadsQueryParams,
+} from '@/types'
 import { apiClient } from '@/lib/api/client'
-import type { User, Thread, ThreadDetail, Comment } from '@/types'
 
 // Extend existing ApiClient with microblog-specific methods
 class MicroblogApi {
   // Auth
   async register(name: string, email: string, password: string) {
-    return apiClient.post<{ user: User }>('/register', { name, email, password })
+    return apiClient.post<{ user: User }>('/register', {
+      name,
+      email,
+      password,
+    })
   }
 
   async login(email: string, password: string) {
-    const response = await apiClient.post<{ token: string }>('/login', { email, password })
-    
+    const response = await apiClient.post<{ token: string }>('/login', {
+      email,
+      password,
+    })
+
     if (response.data?.token) {
       localStorage.setItem('token', response.data.token)
     }
-    
+
     return response
   }
 
@@ -23,12 +37,32 @@ class MicroblogApi {
   }
 
   // Threads
-  async getAllThreads() {
-    return apiClient.get<{ threads: Thread[] }>('/threads')
+  async getAllThreads(params?: ThreadsQueryParams) {
+    const queryParams = new URLSearchParams()
+
+    if (params?.start !== undefined)
+      queryParams.append('start', params.start.toString())
+    if (params?.length !== undefined)
+      queryParams.append('length', params.length.toString())
+    if (params?.sort) queryParams.append('sort', params.sort)
+    if (params?.fields) queryParams.append('fields', params.fields)
+    if (params?.search) queryParams.append('search', params.search)
+
+    const queryString = queryParams.toString()
+    const url = queryString ? `/threads?${queryString}` : '/threads'
+
+    // API returns PaginatedResponse directly (with data array inside)
+    const response = await apiClient.get<Thread[]>(url)
+    // Transform ApiResponse<Thread[]> to match PaginatedResponse structure
+    return response as unknown as PaginatedResponse<Thread>
   }
 
   async createThread(title: string, body: string, category: string) {
-    return apiClient.post<{ thread: Thread }>('/threads', { title, body, category })
+    return apiClient.post<{ thread: Thread }>('/threads', {
+      title,
+      body,
+      category,
+    })
   }
 
   async getThreadDetail(threadId: string) {
@@ -41,7 +75,10 @@ class MicroblogApi {
 
   // Comments
   async createComment(threadId: string, content: string) {
-    return apiClient.post<{ comment: Comment }>(`/threads/${threadId}/comments`, { content })
+    return apiClient.post<{ comment: Comment }>(
+      `/threads/${threadId}/comments`,
+      { content }
+    )
   }
 
   // Votes

@@ -15,8 +15,24 @@ import { Sidebar } from '../organisms/Sidebar'
 import { ThreadList } from '../organisms/ThreadList'
 import { CreateThreadDialog } from '../organisms/CreateThreadDialog'
 import { api } from '../../services/api'
-import type { Thread, User } from '../../types'
+import type { Thread, User } from '@/types/thread'
 import { toast } from 'sonner'
+
+function getErrorMessage(error: unknown): string {
+  if (!error) return 'An unexpected error occurred'
+  if (typeof error === 'string') return error
+  if (error instanceof Error) return error.message
+  try {
+    // Try to read common shapes like { message } or { error: string }
+    const err = error as Record<string, unknown>
+    if (typeof err.message === 'string') return err.message
+    if (typeof err.error === 'string') return err.error
+    if (typeof err.data === 'string') return err.data
+  } catch {
+    // ignore
+  }
+  return 'An unexpected error occurred'
+}
 
 export const HomeTemplate = () => {
   const [threads, setThreads] = useState<Thread[]>([])
@@ -39,17 +55,18 @@ export const HomeTemplate = () => {
         if (userResponse.data){
           setUser(userResponse.data.user)
         }
-      } catch (error) {
+      } catch {
         // User not logged in
       }
 
       // Load threads
       const threadsResponse = await api.getAllThreads()
       if (threadsResponse.data){
-        setThreads(threadsResponse.data.threads)
+        setThreads(threadsResponse.data || [])
       }
-    } catch (error: any) {
-      toast.error(error.message || 'Failed to load data')
+    } catch (error: unknown) {
+      const message = getErrorMessage(error)
+      toast.error(message || 'Failed to load data')
     } finally {
       setLoading(false)
     }
@@ -60,8 +77,9 @@ export const HomeTemplate = () => {
       await api.createThread(title, body, category)
       toast.success('Thread created successfully!')
       loadData()
-    } catch (error: any) {
-      toast.error(error.message || 'Failed to create thread')
+    } catch (error: unknown) {
+      const message = getErrorMessage(error)
+      toast.error(message || 'Failed to create thread')
     }
   }
 
@@ -75,8 +93,9 @@ export const HomeTemplate = () => {
         await api.neutralVoteThread(threadId)
       }
       loadData()
-    } catch (error: any) {
-      toast.error(error.message || 'Failed to vote')
+    } catch (error: unknown) {
+      const message = getErrorMessage(error)
+      toast.error(message || 'Failed to vote')
     }
   }
 
@@ -87,8 +106,9 @@ export const HomeTemplate = () => {
       await api.deleteThread(threadId)
       toast.success('Thread deleted successfully!')
       loadData()
-    } catch (error: any) {
-      toast.error(error.message || 'Failed to delete thread')
+    } catch (error: unknown) {
+      const message = getErrorMessage(error)
+      toast.error(message || 'Failed to delete thread')
     }
   }
 
@@ -112,7 +132,7 @@ export const HomeTemplate = () => {
             <div className="flex items-center justify-between mb-6">
               <h1 className="text-2xl font-bold">Latest Threads</h1>
               <Select value={categoryFilter} onValueChange={setCategoryFilter}>
-                <SelectTrigger className="w-[180px]">
+                <SelectTrigger className="w-45">
                   <SelectValue placeholder="Filter by category" />
                 </SelectTrigger>
                 <SelectContent>

@@ -29,7 +29,7 @@ export const VoteActions = ({
         variant="up"
         disabled={disabled}
       />
-      <span className="text-sm font-medium min-w-[2rem] text-center">{score}</span>
+      <span className="text-sm font-medium min-w-8 text-center">{score}</span>
       <VoteButton
         isActive={isDownVoted}
         onClick={onDownVote}

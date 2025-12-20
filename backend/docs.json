@@ -87,7 +87,7 @@
   "info": {
     "description": "API Documentation for microblog",
     "title": "microblog",
-    "version": "0.0.30"
+    "version": "0.0.150"
   },
   "openapi": "3.0.4",
   "paths": {
@@ -16043,18 +16043,94 @@
       "get": {
         "description": "Retrieve a list of resources with optional filtering and pagination",
         "operationId": "getApiUsers",
-        "parameters": null,
-        "requestBody": {},
+        "parameters": [
+          {
+            "description": "Query schema",
+            "in": "",
+            "name": "schema",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/x-www-form-urlencoded": {
+              "schema": {
+                "properties": {},
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
         "responses": {
           "200": {
             "content": {
               "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/SuccessResponse"
+                "examples": {
+                  "Example1": {
+                    "value": {
+                      "schema": "schema"
+                    }
+                  },
+                  "Example2": {
+                    "value": {
+                      "data": "responseData",
+                      "draw": "*ast.SelectorExpr",
+                      "recordsFiltered": "recordsFiltered",
+                      "recordsTotal": "recordsTotal",
+                      "success": "true"
+                    }
+                  }
                 }
               }
             },
-            "description": "Successful response"
+            "description": "Response 200"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "examples": {
+                  "Example1": {
+                    "value": {
+                      "error": "Invalid field: \" + f",
+                      "success": "false"
+                    }
+                  },
+                  "Example2": {
+                    "value": {
+                      "error": "filterErr",
+                      "message": "*ast.SelectorExpr",
+                      "success": "false"
+                    }
+                  },
+                  "Example3": {
+                    "value": {
+                      "error": "*ast.CallExpr",
+                      "message": "*ast.CallExpr",
+                      "success": "false"
+                    }
+                  },
+                  "Example4": {
+                    "value": {
+                      "error": "filterErr",
+                      "message": "*ast.SelectorExpr",
+                      "success": "false"
+                    }
+                  },
+                  "Example5": {
+                    "value": {
+                      "error": "*ast.CallExpr",
+                      "message": "*ast.CallExpr",
+                      "success": "false"
+                    }
+                  }
+                }
+              }
+            },
+            "description": "Response 400"
           },
           "401": {
             "content": {
@@ -16089,16 +16165,21 @@
           "500": {
             "content": {
               "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
+                "examples": {
+                  "Example1": {
+                    "value": {
+                      "error": "*ast.CallExpr",
+                      "success": "false"
+                    }
+                  }
                 }
               }
             },
-            "description": "Internal server error"
+            "description": "Response 500"
           }
         },
         "security": null,
-        "summary": "Get all backend/internal/routes",
+        "summary": "Get all GET_DEFAULT_TABLE",
         "tags": [
           "Api"
         ]
@@ -17418,6 +17499,156 @@
         ]
       }
     },
+    "/assets/BaseTanStackRouterDevtoolsPanel-BBz1qLry-D7pcudMR.js": {
+      "get": {
+        "description": "Retrieve a list of resources with optional filtering and pagination",
+        "operationId": "getAssetsBaseTanStackRouterDevtoolsPanel-BBz1qLry-D7pcudMR.Js",
+        "parameters": [
+          {
+            "description": "Header Cache-Control",
+            "in": "header",
+            "name": "Cache-Control",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {},
+        "responses": {
+          "200": {
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "description": "Response 200"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized - Authentication required"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Forbidden - Insufficient permissions"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not found - Resource does not exist"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Internal server error"
+          }
+        },
+        "security": null,
+        "summary": "Get all func1",
+        "tags": [
+          "Assets"
+        ]
+      }
+    },
+    "/assets/BaseTanStackRouterDevtoolsPanel-BBz1qLry-GcRQgoyQ.js": {
+      "get": {
+        "description": "Retrieve a list of resources with optional filtering and pagination",
+        "operationId": "getAssetsBaseTanStackRouterDevtoolsPanel-BBz1qLry-GcRQgoyQ.Js",
+        "parameters": [
+          {
+            "description": "Header Cache-Control",
+            "in": "header",
+            "name": "Cache-Control",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {},
+        "responses": {
+          "200": {
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "description": "Response 200"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized - Authentication required"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Forbidden - Insufficient permissions"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not found - Resource does not exist"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Internal server error"
+          }
+        },
+        "security": null,
+        "summary": "Get all func1",
+        "tags": [
+          "Assets"
+        ]
+      }
+    },
     "/assets/Combination-BK66ZzmZ.js": {
       "get": {
         "description": "Retrieve a list of resources with optional filtering and pagination",
@@ -17647,6 +17878,81 @@
       "get": {
         "description": "Retrieve a list of resources with optional filtering and pagination",
         "operationId": "getAssetsConfirmDialog-B7znPsBh.Js",
+        "parameters": [
+          {
+            "description": "Header Cache-Control",
+            "in": "header",
+            "name": "Cache-Control",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {},
+        "responses": {
+          "200": {
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "description": "Response 200"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized - Authentication required"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Forbidden - Insufficient permissions"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not found - Resource does not exist"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Internal server error"
+          }
+        },
+        "security": null,
+        "summary": "Get all func1",
+        "tags": [
+          "Assets"
+        ]
+      }
+    },
+    "/assets/FloatingTanStackRouterDevtools-DymJEvfG-4ZsJOkMY.js": {
+      "get": {
+        "description": "Retrieve a list of resources with optional filtering and pagination",
+        "operationId": "getAssetsFloatingTanStackRouterDevtools-DymJEvfG-4ZsJOkMY.Js",
         "parameters": [
           {
             "description": "Header Cache-Control",
@@ -23868,6 +24174,81 @@
         ]
       }
     },
+    "/assets/index-Bwj3bNmO.css": {
+      "get": {
+        "description": "Retrieve a list of resources with optional filtering and pagination",
+        "operationId": "getAssetsIndex-Bwj3bNmO.Css",
+        "parameters": [
+          {
+            "description": "Header Cache-Control",
+            "in": "header",
+            "name": "Cache-Control",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {},
+        "responses": {
+          "200": {
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "description": "Response 200"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized - Authentication required"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Forbidden - Insufficient permissions"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not found - Resource does not exist"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Internal server error"
+          }
+        },
+        "security": null,
+        "summary": "Get all func1",
+        "tags": [
+          "Assets"
+        ]
+      }
+    },
     "/assets/index-BwrICLJQ.js": {
       "get": {
         "description": "Retrieve a list of resources with optional filtering and pagination",
@@ -25147,6 +25528,81 @@
       "get": {
         "description": "Retrieve a list of resources with optional filtering and pagination",
         "operationId": "getAssetsIndex-CwHP35IC.Css",
+        "parameters": [
+          {
+            "description": "Header Cache-Control",
+            "in": "header",
+            "name": "Cache-Control",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {},
+        "responses": {
+          "200": {
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "description": "Response 200"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized - Authentication required"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Forbidden - Insufficient permissions"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not found - Resource does not exist"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Internal server error"
+          }
+        },
+        "security": null,
+        "summary": "Get all func1",
+        "tags": [
+          "Assets"
+        ]
+      }
+    },
+    "/assets/index-CxaRrGeR.js": {
+      "get": {
+        "description": "Retrieve a list of resources with optional filtering and pagination",
+        "operationId": "getAssetsIndex-CxaRrGeR.Js",
         "parameters": [
           {
             "description": "Header Cache-Control",

@@ -1,6 +1,6 @@
 import { Loader2 } from 'lucide-react'
 import { ThreadCard } from '../molecules/ThreadCard'
-import type { Thread } from '../../types'
+import type { Thread } from '@/types/thread'
 
 interface ThreadListProps {
     threads: Thread[]
@@ -24,7 +24,6 @@ export const ThreadList = ({
             </div>
         )
     }
-
     if (threads.length === 0) {
         return (
             <div className="text-center py-12">

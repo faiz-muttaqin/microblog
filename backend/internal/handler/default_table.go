@@ -333,13 +333,8 @@ func GET_DEFAULT_TableDataHandler(db *gorm.DB, model interface{}, preload []stri
 	}
 }
 
-// Ensure this not coluumn name draw, start, length, sort, schema
-func GET_DEFAULT_TABLE(
-	db *gorm.DB,
-	model interface{},
-	preload []string,
-) gin.HandlerFunc {
-
+// Ensure this not column name draw, start, length, sort, schema
+func GET_DEFAULT_TABLE(db *gorm.DB, model interface{}, preload []string) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		// =============================
 		// 🔹 Build schema dari struct
@@ -1029,7 +1024,7 @@ func PATCH_DEFAULT_TableDataHandler(db *gorm.DB, model interface{}, preload []st
 }
 
 // cleanupEmptyRelations removes unloaded relations (those with ID = 0) from the response
-func cleanupEmptyRelations(results interface{}, preloadedRelations []string) []gin.H {
+func cleanupEmptyRelations(results any, preloadedRelations []string) []gin.H {
 	sliceValue := reflect.ValueOf(results).Elem()
 	data := make([]gin.H, 0, sliceValue.Len())
 
@@ -1043,7 +1038,6 @@ func cleanupEmptyRelations(results interface{}, preloadedRelations []string) []g
 		item := sliceValue.Index(i)
 		itemType := item.Type()
 		rowData := gin.H{}
-
 		for j := 0; j < itemType.NumField(); j++ {
 			field := itemType.Field(j)
 			fieldValue := item.Field(j)
@@ -1071,18 +1065,70 @@ func cleanupEmptyRelations(results interface{}, preloadedRelations []string) []g
 					isRelation = true
 				}
 			}
-
 			if isRelation {
 				// Check if this relation was preloaded
 				relationName := strings.ToLower(jsonTag)
 				if !preloadMap[relationName] {
 					// Not preloaded, check if it's empty
-					if fieldKind == reflect.Struct {
-						// For struct relations, check if ID field is 0
-						idField := fieldValue.FieldByName("ID")
-						if idField.IsValid() && idField.CanUint() && idField.Uint() == 0 {
-							// Empty relation, skip it
+					if fieldKind == reflect.Ptr {
+						if fieldValue.IsNil() {
 							continue
+						}
+						// dereference for further checks
+						fieldValue = fieldValue.Elem()
+						fieldKind = fieldValue.Kind()
+					}
+
+					if fieldKind == reflect.Struct {
+						// For struct relations, try to find common ID field
+						idField := fieldValue.FieldByName("ID")
+						if !idField.IsValid() {
+							// try alternative common names
+							idField = fieldValue.FieldByName("Id")
+						}
+						if idField.IsValid() {
+							switch idField.Kind() {
+							case reflect.String:
+								if idField.String() == "" {
+									continue
+								}
+							case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
+								if idField.Int() == 0 {
+									continue
+								}
+							case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64, reflect.Uintptr:
+								if idField.Uint() == 0 {
+									continue
+								}
+							case reflect.Ptr:
+								if idField.IsNil() {
+									continue
+								}
+								// dereference pointer id and check
+								idv := idField.Elem()
+								if (idv.Kind() == reflect.String && idv.String() == "") || ((idv.Kind() >= reflect.Int && idv.Kind() <= reflect.Int64) && idv.Int() == 0) || ((idv.Kind() >= reflect.Uint && idv.Kind() <= reflect.Uintptr) && idv.Uint() == 0) {
+									continue
+								}
+							default:
+								// If we cannot determine id zero value, fall back to skipping when all-zero struct
+								// (check if all fields are zero)
+								allZero := true
+								for k := 0; k < fieldValue.NumField(); k++ {
+									if !reflect.DeepEqual(fieldValue.Field(k).Interface(), reflect.Zero(fieldValue.Field(k).Type()).Interface()) {
+										allZero = false
+										break
+									}
+								}
+								if allZero {
+									continue
+								}
+							}
+						} else {
+							// No identifiable ID field — fall back to skip if struct is zero value
+							isZero := reflect.DeepEqual(fieldValue.Interface(), reflect.Zero(fieldValue.Type()).Interface())
+							if isZero {
+								continue
+							}
 						}
 					} else if fieldKind == reflect.Slice {
 						// For slice relations, check if empty or nil
@@ -1094,11 +1140,178 @@ func cleanupEmptyRelations(results interface{}, preloadedRelations []string) []g
 				}
 			}
 
-			rowData[jsonTag] = fieldValue.Interface()
+			// Recursively clean the value before adding to rowData
+			rowData[jsonTag] = cleanValueRecursive(fieldValue.Interface())
 		}
 
 		data = append(data, rowData)
 	}
 
 	return data
+}
+
+// cleanValueRecursive recursively cleans nested structures, removing fields with empty/zero ID
+func cleanValueRecursive(value interface{}) interface{} {
+	if value == nil {
+		return nil
+	}
+
+	v := reflect.ValueOf(value)
+
+	// Handle pointer
+	if v.Kind() == reflect.Ptr {
+		if v.IsNil() {
+			return nil
+		}
+		v = v.Elem()
+	}
+
+	switch v.Kind() {
+	case reflect.Struct:
+		// Check if it's a time.Time or sql.NullXXX (not a relation)
+		typeName := v.Type().String()
+		if strings.Contains(typeName, "time.Time") ||
+			strings.Contains(typeName, "sql.Null") ||
+			strings.Contains(typeName, "gorm.DeletedAt") {
+			return v.Interface()
+		}
+
+		// Check if this struct has an empty/zero ID
+		idField := v.FieldByName("ID")
+		if !idField.IsValid() {
+			idField = v.FieldByName("Id")
+		}
+		if !idField.IsValid() {
+			idField = v.FieldByName("id")
+		}
+
+		if idField.IsValid() {
+			// Check if ID is empty/zero
+			switch idField.Kind() {
+			case reflect.String:
+				if idField.String() == "" {
+					return nil // Don't include this struct
+				}
+			case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
+				if idField.Int() == 0 {
+					return nil // Don't include this struct
+				}
+			case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64, reflect.Uintptr:
+				if idField.Uint() == 0 {
+					return nil // Don't include this struct
+				}
+			case reflect.Ptr:
+				if idField.IsNil() {
+					return nil
+				}
+				idv := idField.Elem()
+				if (idv.Kind() == reflect.String && idv.String() == "") ||
+					((idv.Kind() >= reflect.Int && idv.Kind() <= reflect.Int64) && idv.Int() == 0) ||
+					((idv.Kind() >= reflect.Uint && idv.Kind() <= reflect.Uintptr) && idv.Uint() == 0) {
+					return nil
+				}
+			}
+		}
+
+		// Recursively clean nested struct fields
+		result := gin.H{}
+		vType := v.Type()
+		for i := 0; i < v.NumField(); i++ {
+			field := vType.Field(i)
+			jsonTag := strings.Split(field.Tag.Get("json"), ",")[0]
+			if jsonTag == "" || jsonTag == "-" {
+				continue
+			}
+
+			fieldValue := v.Field(i)
+			cleanedValue := cleanValueRecursive(fieldValue.Interface())
+
+			// Only include if not nil
+			if cleanedValue != nil {
+				result[jsonTag] = cleanedValue
+			}
+		}
+		return result
+
+	case reflect.Slice:
+		if v.Len() == 0 {
+			return []interface{}{}
+		}
+
+		result := make([]interface{}, 0)
+		for i := 0; i < v.Len(); i++ {
+			item := v.Index(i)
+			cleanedItem := cleanValueRecursive(item.Interface())
+
+			// Only include non-nil items
+			if cleanedItem != nil {
+				result = append(result, cleanedItem)
+			}
+		}
+		return result
+
+	case reflect.Map:
+		if v.Len() == 0 {
+			return gin.H{}
+		}
+
+		result := gin.H{}
+		iter := v.MapRange()
+		for iter.Next() {
+			key := iter.Key()
+			val := iter.Value()
+
+			keyStr := fmt.Sprintf("%v", key.Interface())
+
+			// Check if this is an ID field with empty/zero value
+			if strings.ToLower(keyStr) == "id" {
+				switch val.Kind() {
+				case reflect.String:
+					if val.String() == "" {
+						return nil // Skip entire map
+					}
+				case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
+					if val.Int() == 0 {
+						return nil // Skip entire map
+					}
+				case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
+					if val.Uint() == 0 {
+						return nil // Skip entire map
+					}
+				case reflect.Interface:
+					// Handle interface{} wrapping actual value
+					actualVal := val.Elem()
+					if actualVal.IsValid() {
+						switch actualVal.Kind() {
+						case reflect.String:
+							if actualVal.String() == "" {
+								return nil
+							}
+						case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
+							if actualVal.Int() == 0 {
+								return nil
+							}
+						case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
+							if actualVal.Uint() == 0 {
+								return nil
+							}
+						case reflect.Float32, reflect.Float64:
+							if actualVal.Float() == 0 {
+								return nil
+							}
+						}
+					}
+				}
+			}
+
+			cleanedValue := cleanValueRecursive(val.Interface())
+			if cleanedValue != nil {
+				result[keyStr] = cleanedValue
+			}
+		}
+		return result
+
+	default:
+		return v.Interface()
+	}
 }
