@@ -11,29 +11,29 @@ import { apiClient } from '@/lib/api/client'
 // Extend existing ApiClient with microblog-specific methods
 class MicroblogApi {
   // Auth
-  async register(name: string, email: string, password: string) {
-    return apiClient.post<{ user: User }>('/register', {
-      name,
-      email,
-      password,
-    })
-  }
+  // async register(name: string, email: string, password: string) {
+  //   return apiClient.post<{ user: User }>('/register', {
+  //     name,
+  //     email,
+  //     password,
+  //   })
+  // }
 
-  async login(email: string, password: string) {
-    const response = await apiClient.post<{ token: string }>('/login', {
-      email,
-      password,
-    })
+  // async login(email: string, password: string) {
+  //   const response = await apiClient.post<{ token: string }>('/login', {
+  //     email,
+  //     password,
+  //   })
 
-    if (response.data?.token) {
-      localStorage.setItem('token', response.data.token)
-    }
+  //   if (response.data?.token) {
+  //     localStorage.setItem('token', response.data.token)
+  //   }
 
-    return response
-  }
+  //   return response
+  // }
 
   async getMe() {
-    return apiClient.get<{ user: User }>('/users/me')
+    return apiClient.get<User>('/users/me')
   }
 
   // Threads

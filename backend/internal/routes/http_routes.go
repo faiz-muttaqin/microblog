@@ -105,64 +105,57 @@ func GetOwnProfileHandler(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{
-		"status": "success",
-		"data": gin.H{
-			"user": gin.H{
-				"id":     user.ID,
-				"name":   user.Name,
-				"email":  user.Email,
-				"avatar": user.Avatar,
-			},
-		},
+		"success": true,
+		"data":    user,
 	})
 }
 
 // Get all threads
-func GetAllThreadsHandler(c *gin.Context) {
-	var threads []model.Thread
-	if err := database.DB.Preload("Comments").Preload("Votes").Find(&threads).Error; err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{
-			"success": false,
-			"error":   err.Error(),
-			"message": "failed to get threads",
-			"data":    gin.H{},
-		})
-		return
-	}
+// func GetAllThreadsHandler(c *gin.Context) {
+// 	var threads []model.Thread
+// 	if err := database.DB.Preload("Comments").Preload("Votes").Find(&threads).Error; err != nil {
+// 		c.JSON(http.StatusInternalServerError, gin.H{
+// 			"success": false,
+// 			"error":   err.Error(),
+// 			"message": "failed to get threads",
+// 			"data":    gin.H{},
+// 		})
+// 		return
+// 	}
 
-	var result []gin.H
-	for _, t := range threads {
-		upVotesBy := []string{}
-		downVotesBy := []string{}
-		for _, v := range t.Votes {
-			switch v.VoteType {
-			case "up":
-				upVotesBy = append(upVotesBy, v.UserID)
-			case "down":
-				downVotesBy = append(downVotesBy, v.UserID)
-			}
-		}
-		result = append(result, gin.H{
-			"id":            t.ID,
-			"title":         t.Title,
-			"body":          t.Body,
-			"category":      t.Category,
-			"createdAt":     t.CreatedAt,
-			"userId":        t.UserID,
-			"totalComments": len(t.Comments),
-			"upVotesBy":     upVotesBy,
-			"downVotesBy":   downVotesBy,
-		})
-	}
+// 	var result []gin.H
+// 	for _, t := range threads {
+// 		upVotesBy := []string{}
+// 		downVotesBy := []string{}
+// 		for _, v := range t.Votes {
+// 			switch v.VoteType {
+// 			case "up":
+// 				upVotesBy = append(upVotesBy, v.UserID)
+// 			case "down":
+// 				downVotesBy = append(downVotesBy, v.UserID)
+// 			}
+// 		}
+// 		result = append(result, gin.H{
+// 			"id":            t.ID,
+// 			"title":         t.Title,
+// 			"body":          t.Body,
+// 			"category":      t.Category,
+// 			"createdAt":     t.CreatedAt,
+// 			"userId":        t.UserID,
+// 			"totalComments": len(t.Comments),
+// 			"upVotesBy":     upVotesBy,
+// 			"downVotesBy":   downVotesBy,
+// 		})
+// 	}
 
-	c.JSON(http.StatusOK, gin.H{
-		"success": true,
-		"message": "threads retrieved",
-		"data": gin.H{
-			"threads": result,
-		},
-	})
-}
+// 	c.JSON(http.StatusOK, gin.H{
+// 		"success": true,
+// 		"message": "threads retrieved",
+// 		"data": gin.H{
+// 			"threads": result,
+// 		},
+// 	})
+// }
 
 // Create thread
 func CreateThreadHandler(c *gin.Context) {
@@ -213,24 +206,10 @@ func CreateThreadHandler(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{
+	c.JSON(http.StatusCreated, gin.H{
 		"success": true,
 		"message": "thread created",
-		"data": gin.H{
-			"thread": gin.H{
-				"id":        thread.ID,
-				"title":     thread.Title,
-				"body":      thread.Body,
-				"category":  thread.Category,
-				"createdAt": thread.CreatedAt.Format(time.RFC3339),
-				"owner": gin.H{
-					"id":     user.ID,
-					"name":   user.Name,
-					"email":  user.Email,
-					"avatar": user.Avatar,
-				},
-			},
-		},
+		"data":    thread,
 	})
 }
 func UpdateThreadHandler(c *gin.Context) {
@@ -351,7 +330,7 @@ func DeleteThreadHandler(c *gin.Context) {
 	if thread.UserID != user.ID {
 		c.JSON(http.StatusForbidden, gin.H{
 			"success": false,
-			"error":   err.Error(),
+			"error":   "Forbidden",
 			"message": "not authorized to delete this thread",
 			"data":    gin.H{},
 		})

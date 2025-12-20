@@ -53,7 +53,7 @@ export const HomeTemplate = () => {
       try {
         const userResponse = await api.getMe()
         if (userResponse.data){
-          setUser(userResponse.data.user)
+          setUser(userResponse.data)
         }
       } catch {
         // User not logged in
