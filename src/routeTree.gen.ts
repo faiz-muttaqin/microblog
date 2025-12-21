@@ -14,6 +14,7 @@ import { Route as authRouteRouteImport } from './routes/(auth)/route'
 import { Route as threadAppIndexRouteImport } from './routes/(thread-app)/index'
 import { Route as threadAppTrendingsRouteImport } from './routes/(thread-app)/trendings'
 import { Route as threadAppProfileRouteImport } from './routes/(thread-app)/profile'
+import { Route as threadAppChatsRouteImport } from './routes/(thread-app)/chats'
 import { Route as errors503RouteImport } from './routes/(errors)/503'
 import { Route as errors500RouteImport } from './routes/(errors)/500'
 import { Route as errors404RouteImport } from './routes/(errors)/404'
@@ -65,6 +66,11 @@ const threadAppTrendingsRoute = threadAppTrendingsRouteImport.update({
 const threadAppProfileRoute = threadAppProfileRouteImport.update({
   id: '/profile',
   path: '/profile',
+  getParentRoute: () => threadAppRouteRoute,
+} as any)
+const threadAppChatsRoute = threadAppChatsRouteImport.update({
+  id: '/chats',
+  path: '/chats',
   getParentRoute: () => threadAppRouteRoute,
 } as any)
 const errors503Route = errors503RouteImport.update({
@@ -241,6 +247,7 @@ export interface FileRoutesByFullPath {
   '/404': typeof errors404Route
   '/500': typeof errors500Route
   '/503': typeof errors503Route
+  '/chats': typeof threadAppChatsRoute
   '/profile': typeof threadAppProfileRoute
   '/trendings': typeof threadAppTrendingsRoute
   '/': typeof threadAppIndexRoute
@@ -273,6 +280,7 @@ export interface FileRoutesByTo {
   '/404': typeof errors404Route
   '/500': typeof errors500Route
   '/503': typeof errors503Route
+  '/chats': typeof threadAppChatsRoute
   '/profile': typeof threadAppProfileRoute
   '/trendings': typeof threadAppTrendingsRoute
   '/': typeof threadAppIndexRoute
@@ -309,6 +317,7 @@ export interface FileRoutesById {
   '/(errors)/404': typeof errors404Route
   '/(errors)/500': typeof errors500Route
   '/(errors)/503': typeof errors503Route
+  '/(thread-app)/chats': typeof threadAppChatsRoute
   '/(thread-app)/profile': typeof threadAppProfileRoute
   '/(thread-app)/trendings': typeof threadAppTrendingsRoute
   '/(thread-app)/': typeof threadAppIndexRoute
@@ -345,6 +354,7 @@ export interface FileRouteTypes {
     | '/404'
     | '/500'
     | '/503'
+    | '/chats'
     | '/profile'
     | '/trendings'
     | '/'
@@ -377,6 +387,7 @@ export interface FileRouteTypes {
     | '/404'
     | '/500'
     | '/503'
+    | '/chats'
     | '/profile'
     | '/trendings'
     | '/'
@@ -412,6 +423,7 @@ export interface FileRouteTypes {
     | '/(errors)/404'
     | '/(errors)/500'
     | '/(errors)/503'
+    | '/(thread-app)/chats'
     | '/(thread-app)/profile'
     | '/(thread-app)/trendings'
     | '/(thread-app)/'
@@ -480,6 +492,13 @@ declare module '@tanstack/react-router' {
       path: '/profile'
       fullPath: '/profile'
       preLoaderRoute: typeof threadAppProfileRouteImport
+      parentRoute: typeof threadAppRouteRoute
+    }
+    '/(thread-app)/chats': {
+      id: '/(thread-app)/chats'
+      path: '/chats'
+      fullPath: '/chats'
+      preLoaderRoute: typeof threadAppChatsRouteImport
       parentRoute: typeof threadAppRouteRoute
     }
     '/(errors)/503': {
@@ -711,6 +730,7 @@ const authRouteRouteWithChildren = authRouteRoute._addFileChildren(
 )
 
 interface threadAppRouteRouteChildren {
+  threadAppChatsRoute: typeof threadAppChatsRoute
   threadAppProfileRoute: typeof threadAppProfileRoute
   threadAppTrendingsRoute: typeof threadAppTrendingsRoute
   threadAppIndexRoute: typeof threadAppIndexRoute
@@ -719,6 +739,7 @@ interface threadAppRouteRouteChildren {
 }
 
 const threadAppRouteRouteChildren: threadAppRouteRouteChildren = {
+  threadAppChatsRoute: threadAppChatsRoute,
   threadAppProfileRoute: threadAppProfileRoute,
   threadAppTrendingsRoute: threadAppTrendingsRoute,
   threadAppIndexRoute: threadAppIndexRoute,

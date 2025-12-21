@@ -1,11 +1,12 @@
 import { Link, useLocation } from '@tanstack/react-router'
-import { Home, Hash, Trophy, User as UserIcon } from 'lucide-react'
+import { Home, Hash, Trophy,MessageCircle, User as UserIcon } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 const navItems = [
     { name: 'Home', href: '/', icon: Home },
     { name: 'Threads', href: '/threads', icon: Hash },
     { name: 'Trendings', href: '/trendings', icon: Trophy },
+    { name: 'Chats', href: '/chats', icon: MessageCircle },
     { name: 'Profile', href: '/dashboard/profile', icon: UserIcon },
 ]
 

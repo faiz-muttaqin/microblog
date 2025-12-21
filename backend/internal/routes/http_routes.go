@@ -185,6 +185,37 @@ func CreateThreadHandler(c *gin.Context) {
 		return
 	}
 
+	// Check daily thread limit (100 threads per day)
+	var threadCount int64
+	today := time.Now()
+	startOfDay := time.Date(today.Year(), today.Month(), today.Day(), 0, 0, 0, 0, today.Location())
+	endOfDay := startOfDay.Add(24 * time.Hour)
+
+	if err := database.DB.Model(&model.Thread{}).
+		Where("user_id = ? AND created_at >= ? AND created_at < ?", user.ID, startOfDay, endOfDay).
+		Count(&threadCount).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"success": false,
+			"error":   err.Error(),
+			"message": "failed to check thread count",
+			"data":    gin.H{},
+		})
+		return
+	}
+
+	if threadCount >= 100 {
+		c.JSON(http.StatusTooManyRequests, gin.H{
+			"success": false,
+			"error":   "daily limit exceeded",
+			"message": "you have reached the maximum limit of 100 threads per day",
+			"data": gin.H{
+				"daily_limit":   100,
+				"current_count": threadCount,
+			},
+		})
+		return
+	}
+
 	// Create thread object
 	thread := model.Thread{
 		ID:        uuid.New().String(),

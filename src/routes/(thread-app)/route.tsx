@@ -22,7 +22,7 @@ function LayoutContent() {
 
   return (
     <div className="min-h-screen bg-background">
-      <Header onCreateThread={() => setCreateDialogOpen(true)} />
+      <Header />
 
       <div className="container flex">
         <Sidebar />

@@ -1,8 +1,8 @@
 {
-  "datetime": "2025-12-21 16:21:29",
+  "datetime": "2025-12-21 22:53:39",
   "name": "microblog",
   "private": true,
-  "version": "0.0.202",
+  "version": "0.0.205",
   "type": "module",
   "scripts": {
     "dev": "vite",
