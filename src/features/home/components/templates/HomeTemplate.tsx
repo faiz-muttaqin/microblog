@@ -121,7 +121,6 @@ export const HomeTemplate = () => {
               threads={filteredThreads}
               currentUserId={user?.id}
               loading={loading}
-              // onVote={handleVote}
               onDelete={handleDeleteThread}
             />
           </div>

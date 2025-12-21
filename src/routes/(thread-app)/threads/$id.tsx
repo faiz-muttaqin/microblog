@@ -32,6 +32,12 @@ function RouteComponent() {
   const [loading, setLoading] = useState(true)
   const [commentsLoading, setCommentsLoading] = useState(true)
 
+  // Local state for thread votes (optimistic UI)
+  const [isThreadUpVoted, setIsThreadUpVoted] = useState(false)
+  const [isThreadDownVoted, setIsThreadDownVoted] = useState(false)
+  const [threadUpVotes, setThreadUpVotes] = useState(0)
+  const [threadDownVotes, setThreadDownVotes] = useState(0)
+
   useEffect(() => {
     loadData()
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -43,9 +49,11 @@ function RouteComponent() {
       setCommentsLoading(true)
 
       // Get current user
+      let currentUser: User | undefined
       try {
         const userResponse = await api.getMe()
         if (userResponse.data) {
+          currentUser = userResponse.data
           setUser(userResponse.data)
         }
       } catch {
@@ -56,6 +64,20 @@ function RouteComponent() {
       const threadResponse = await api.getThreadDetail(id)
       if (threadResponse.data) {
         setThread(threadResponse.data)
+        
+        // Initialize vote state
+        const threadData = threadResponse.data
+        const initialIsUpVoted = currentUser
+          ? !!threadData.up_voted_by_me || (threadData.upVotesBy || []).includes(currentUser.id)
+          : false
+        const initialIsDownVoted = currentUser
+          ? !!threadData.down_voted_by_me || (threadData.downVotesBy || []).includes(currentUser.id)
+          : false
+        
+        setIsThreadUpVoted(initialIsUpVoted)
+        setIsThreadDownVoted(initialIsDownVoted)
+        setThreadUpVotes(threadData.total_up_votes ?? (threadData.upVotesBy || []).length)
+        setThreadDownVotes(threadData.total_down_votes ?? (threadData.downVotesBy || []).length)
       }
 
       // Load comments
@@ -73,7 +95,30 @@ function RouteComponent() {
   }
 
   const handleThreadVote = async (voteType: 'up' | 'down' | 'neutral') => {
-    if (!thread) return
+    if (!thread || !user) return
+
+    const prevIsUp = isThreadUpVoted
+    const prevIsDown = isThreadDownVoted
+    const prevUpCount = threadUpVotes
+    const prevDownCount = threadDownVotes
+
+    // Optimistic UI update
+    if (voteType === 'up') {
+      setIsThreadUpVoted(true)
+      setIsThreadDownVoted(false)
+      setThreadUpVotes((v) => v + (prevIsUp ? 0 : 1))
+      if (prevIsDown) setThreadDownVotes((v) => v - 1)
+    } else if (voteType === 'down') {
+      setIsThreadUpVoted(false)
+      setIsThreadDownVoted(true)
+      setThreadDownVotes((v) => v + (prevIsDown ? 0 : 1))
+      if (prevIsUp) setThreadUpVotes((v) => v - 1)
+    } else {
+      setIsThreadUpVoted(false)
+      setIsThreadDownVoted(false)
+      if (prevIsUp) setThreadUpVotes((v) => v - 1)
+      if (prevIsDown) setThreadDownVotes((v) => v - 1)
+    }
 
     try {
       let response
@@ -86,54 +131,34 @@ function RouteComponent() {
       }
 
       if (response.data) {
-        // Update thread with new vote counts
+        // Update with server response
+        if (response.data.total_up_votes !== undefined) {
+          setThreadUpVotes(response.data.total_up_votes)
+        }
+        if (response.data.total_down_votes !== undefined) {
+          setThreadDownVotes(response.data.total_down_votes)
+        }
+        
+        // Update thread object as well
         setThread({
           ...thread,
-          total_up_votes: response.data.total_up_votes || thread.total_up_votes,
-          total_down_votes: response.data.total_down_votes || thread.total_down_votes,
-          up_voted_by_me: response.data.up_voted_by_me || false,
-          down_voted_by_me: response.data.down_voted_by_me || false,
+          total_up_votes: response.data.total_up_votes ?? thread.total_up_votes,
+          total_down_votes: response.data.total_down_votes ?? thread.total_down_votes,
+          up_voted_by_me: response.data.up_voted_by_me ?? false,
+          down_voted_by_me: response.data.down_voted_by_me ?? false,
         })
       }
     } catch (error: unknown) {
+      // Revert optimistic updates on error
+      setIsThreadUpVoted(prevIsUp)
+      setIsThreadDownVoted(prevIsDown)
+      setThreadUpVotes(prevUpCount)
+      setThreadDownVotes(prevDownCount)
       const message = getErrorMessage(error)
       toast.error(message || 'Failed to vote')
     }
   }
 
-  const handleCommentVote = async (commentId: string, voteType: 'up' | 'down' | 'neutral') => {
-    if (!thread) return
-
-    try {
-      let response
-      if (voteType === 'up') {
-        response = await api.upVoteComment(thread.id, commentId)
-      } else if (voteType === 'down') {
-        response = await api.downVoteComment(thread.id, commentId)
-      } else {
-        response = await api.neutralVoteComment(thread.id, commentId)
-      }
-
-      if (response.data) {
-        // Update comment with new vote counts
-        const voteData = response.data
-        setComments(comments.map(comment =>
-          comment.id === commentId
-            ? {
-                ...comment,
-                total_up_votes: voteData.total_up_votes || comment.total_up_votes,
-                total_down_votes: voteData.total_down_votes || comment.total_down_votes,
-                up_voted_by_me: voteData.up_voted_by_me || false,
-                down_voted_by_me: voteData.down_voted_by_me || false,
-              }
-            : comment
-        ))
-      }
-    } catch (error: unknown) {
-      const message = getErrorMessage(error)
-      toast.error(message || 'Failed to vote')
-    }
-  }
 
   const handleCreateComment = async (content: string) => {
     if (!thread) return
@@ -170,13 +195,10 @@ function RouteComponent() {
   const handleThreadVoteClick = (voteType: 'up' | 'down') => {
     if (!thread || !user) return
 
-    const isUpVoted = thread.up_voted_by_me || (thread.upVotesBy || []).includes(user.id)
-    const isDownVoted = thread.down_voted_by_me || (thread.downVotesBy || []).includes(user.id)
-
     // If clicking the same vote, neutralize
-    if (voteType === 'up' && isUpVoted) {
+    if (voteType === 'up' && isThreadUpVoted) {
       handleThreadVote('neutral')
-    } else if (voteType === 'down' && isDownVoted) {
+    } else if (voteType === 'down' && isThreadDownVoted) {
       handleThreadVote('neutral')
     } else {
       handleThreadVote(voteType)
@@ -213,12 +235,6 @@ function RouteComponent() {
     )
   }
 
-  const isUpVoted = user
-    ? !!thread.up_voted_by_me || (thread.upVotesBy || []).includes(user.id)
-    : false
-  const isDownVoted = user
-    ? !!thread.down_voted_by_me || (thread.downVotesBy || []).includes(user.id)
-    : false
   const isOwner = user?.id === thread.user_id
 
   return (
@@ -261,18 +277,17 @@ function RouteComponent() {
 
           <div className="mt-3">
             <h1 className="text-2xl font-bold mb-2">{thread.title}</h1>
+            <p className="whitespace-pre-wrap">{thread.body}</p>
           </div>
         </CardHeader>
 
         <CardContent className="space-y-4">
-          <p className="whitespace-pre-wrap">{thread.body}</p>
-
           <div className="flex items-center gap-4 pt-2">
             <VoteActions
-              upVotesCount={thread.total_up_votes || 0}
-              downVotesCount={thread.total_down_votes || 0}
-              isUpVoted={isUpVoted}
-              isDownVoted={isDownVoted}
+              upVotesCount={threadUpVotes}
+              downVotesCount={threadDownVotes}
+              isUpVoted={isThreadUpVoted}
+              isDownVoted={isThreadDownVoted}
               onUpVote={() => handleThreadVoteClick('up')}
               onDownVote={() => handleThreadVoteClick('down')}
               disabled={!user}
@@ -298,11 +313,10 @@ function RouteComponent() {
               Comments ({comments.length})
             </h2>
 
-            {/* Comment Form with Icon Tray */}
+            {/* Comment Form */}
             {user ? (
               <div className="space-y-2">
                 <CommentForm onSubmit={handleCreateComment} />
-                
               </div>
             ) : (
               <div className="p-4 text-center text-muted-foreground bg-muted/30 rounded-md">
@@ -324,9 +338,9 @@ function RouteComponent() {
                 {comments.map((comment) => (
                   <CommentCard
                     key={comment.id}
+                    threadId={thread.id}
                     comment={comment}
                     currentUserId={user?.id}
-                    onVote={handleCommentVote}
                   />
                 ))}
               </div>

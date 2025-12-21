@@ -61,7 +61,8 @@ export interface ThreadDetail extends Thread {
 
 export interface Vote {
   id: string
-  thread_id: string
+  thread_id?: string
+  comment_id?: string
   user_id: string
   vote_type: 'up' | 'down' | 'neutral'
   total_up_votes?:   number,

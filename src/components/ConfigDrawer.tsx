@@ -1,7 +1,8 @@
 import { type SVGProps } from 'react'
 import { Link } from '@tanstack/react-router'
 import { Root as Radio, Item } from '@radix-ui/react-radio-group'
-import { CircleCheck,  RotateCcw, Settings } from 'lucide-react'
+import { CircleCheck,  RotateCcw } from 'lucide-react'
+import { LuPalette } from "react-icons/lu";
 import { IconDir } from '@/assets/custom/icon-dir'
 import { IconLayoutCompact } from '@/assets/custom/icon-layout-compact'
 import { IconLayoutDefault } from '@/assets/custom/icon-layout-default'
@@ -53,7 +54,7 @@ export function ConfigDrawer() {
           aria-describedby='config-drawer-description'
           className='rounded-full'
         >
-          <Settings aria-hidden='true' />
+          <LuPalette aria-hidden='true' />
         </Button>
       </SheetTrigger>
       <SheetContent className='flex flex-col'>

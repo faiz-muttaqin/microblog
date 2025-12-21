@@ -40,7 +40,6 @@ export const ThreadList = ({
                     key={thread.id}
                     thread={thread}
                     currentUserId={currentUserId}
-                    // onVote={onVote}
                     onDelete={onDelete}
                 />
             ))}

@@ -54,10 +54,6 @@ func GetFirebaseUser(c *gin.Context) (*model.User, error) {
 	claims := token.Claims
 	firebaseAuthData := &FirebaseAuthData{}
 
-	// Map claims to struct
-	if v, ok := claims["auth_time"].(float64); ok {
-		firebaseAuthData.AuthTime = v
-	}
 	if v, ok := claims["email"].(string); ok {
 		firebaseAuthData.Email = v
 	}
@@ -87,9 +83,6 @@ func GetFirebaseUser(c *gin.Context) (*model.User, error) {
 	if v, ok := claims["picture"].(string); ok {
 		firebaseAuthData.Picture = v
 	}
-	if v, ok := claims["user_id"].(string); ok {
-		firebaseAuthData.UserID = v
-	}
 	firebaseAuthData.UID = token.UID
 
 	if len(superUserEmails) == 0 {
@@ -105,6 +98,10 @@ func GetFirebaseUser(c *gin.Context) (*model.User, error) {
 			existingUser.Status = "active"
 			database.DB.Save(&existingUser)
 		}
+		if existingUser.ExternalID == "" {
+			existingUser.ExternalID = firebaseAuthData.UID
+			database.DB.Save(&existingUser)
+		}
 		return &existingUser, nil
 	}
 	verificationStatus := "unverified"
@@ -115,9 +112,10 @@ func GetFirebaseUser(c *gin.Context) (*model.User, error) {
 		ExternalID:         firebaseAuthData.UID,
 		Avatar:             types.Avatar(firebaseAuthData.Picture),
 		Email:              types.Email(firebaseAuthData.Email),
+		Name:               firebaseAuthData.Name,
 		FirstName:          firebaseAuthData.Name,
 		LastName:           firebaseAuthData.Name,
-		Username:           firebaseAuthData.Name,
+		Username:           strings.SplitN(firebaseAuthData.Email, "@", 2)[0],
 		VerificationStatus: verificationStatus,
 		Status:             "inactive",
 		RoleID:             2,
