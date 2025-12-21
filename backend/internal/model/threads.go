@@ -4,6 +4,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/sirupsen/logrus"
 	"gorm.io/gorm"
 )
 
@@ -38,23 +39,38 @@ func (Thread) TableName() string {
 }
 
 type Comment struct {
-	ID             string        `json:"id" gorm:"primaryKey;column:id;size:36"`
-	ThreadID       string        `json:"thread_id" gorm:"column:thread_id;size:36"`
-	UserID         string        `json:"user_id" gorm:"column:user_id;size:36"`
-	User           User          `json:"user" gorm:"foreignKey:UserID"`
-	Content        string        `json:"content" gorm:"column:content;type:text"`
-	CreatedAt      time.Time     `json:"createdAt" gorm:"column:created_at"`
-	UpdatedAt      time.Time     `json:"updatedAt" gorm:"column:updated_at"`
-	TotalUpVotes   int           `json:"total_up_votes" gorm:"column:total_up_votes" ui:"visible;sortable"`
-	TotalDownVotes int           `json:"total_down_votes" gorm:"column:total_down_votes" ui:"visible;sortable"`
-	UpVotedByMe    bool          `json:"up_voted_by_me" gorm:"-" ui:"visible;sortable"`
-	DownVotedByMe  bool          `json:"down_voted_by_me" gorm:"-" ui:"visible;sortable"`
-	Votes          []CommentVote `json:"votes" gorm:"foreignKey:CommentID"`
+	ID             string        `json:"id" gorm:"primaryKey;column:id;size:36" ui:"visible;sortable"`
+	ThreadID       string        `json:"thread_id" gorm:"column:thread_id;size:36" ui:"visible;sortable"`
+	UserID         string        `json:"user_id" gorm:"column:user_id;size:36" ui:"visible;sortable"`
+	User           User          `json:"user" gorm:"foreignKey:UserID" ui:"visible;sortable"`
+	Content        string        `json:"content" gorm:"column:content;type:text" ui:"creatable;visible;sortable"`
+	CreatedAt      time.Time     `json:"createdAt" gorm:"column:created_at" ui:"visible;filterable;sortable"`
+	UpdatedAt      time.Time     `json:"updatedAt" gorm:"column:updated_at" ui:"visible;filterable;sortable"`
+	TotalUpVotes   int           `json:"total_up_votes" gorm:"column:total_up_votes" ui:"visible;filterable;sortable"`
+	TotalDownVotes int           `json:"total_down_votes" gorm:"column:total_down_votes" ui:"visible;filterable;sortable"`
+	UpVotedByMe    bool          `json:"up_voted_by_me" gorm:"-" ui:"visible"`
+	DownVotedByMe  bool          `json:"down_voted_by_me" gorm:"-" ui:"visible"`
+	Votes          []CommentVote `json:"votes" gorm:"foreignKey:CommentID" ui:"visible;visibility;sortable"`
 }
 
 func (c *Comment) BeforeCreate(tx *gorm.DB) error {
 	if c.ID == "" {
 		c.ID = uuid.New().String()
+	}
+	return nil
+}
+func (c *Comment) AfterCreate(tx *gorm.DB) error {
+	if err := tx.Exec(`
+			UPDATE threads
+			SET 
+			total_comments = (
+				SELECT COUNT(*)
+				FROM comments
+				WHERE thread_id = ?
+			)
+			WHERE id = ?
+		`, c.ThreadID, c.ThreadID).Error; err != nil {
+		logrus.Println(err)
 	}
 	return nil
 }

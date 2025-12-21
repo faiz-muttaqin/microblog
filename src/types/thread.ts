@@ -33,7 +33,7 @@ export interface Thread {
   up_voted_by_me: boolean
   down_voted_by_me: boolean
   comments?: Comment[]
-  votes?: ThreadVote[]
+  votes?: Vote[]
   upVotesBy?: string[]
   downVotesBy?: string[]
 }
@@ -41,11 +41,15 @@ export interface Thread {
 export interface Comment {
   id: string
   content: string
-  created_at: string
-  updated_at: string
+  createdAt: string
+  updatedAt: string
   user_id: string
   user: User
   thread_id: string
+  total_up_votes: number
+  total_down_votes: number
+  up_voted_by_me: boolean
+  down_voted_by_me: boolean
   votes?: CommentVote[]
   upVotesBy?: string[]
   downVotesBy?: string[]
@@ -55,11 +59,16 @@ export interface ThreadDetail extends Thread {
   comments: Comment[]
 }
 
-export interface ThreadVote {
+export interface Vote {
   id: string
   thread_id: string
   user_id: string
   vote_type: 'up' | 'down' | 'neutral'
+  total_up_votes?:   number,
+  total_down_votes?: number,
+  total_comments?:   number,
+  up_voted_by_me?:   boolean,
+  down_voted_by_me?: boolean,
 }
 
 export interface CommentVote {

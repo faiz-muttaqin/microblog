@@ -2,9 +2,8 @@ package database
 
 import (
 	"fmt"
-	"time"
-
 	"microblog/backend/internal/model"
+	"time"
 
 	"github.com/sirupsen/logrus"
 	"gorm.io/gorm"

@@ -13,5 +13,6 @@ func Security() gin.HandlerFunc {
 		c.Header("Referrer-Policy", "no-referrer")
 		c.Header("X-XSS-Protection", "1; mode=block")
 		c.Next()
+
 	}
 }

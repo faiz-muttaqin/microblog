@@ -6,7 +6,7 @@ interface ThreadListProps {
     threads: Thread[]
     currentUserId?: string
     loading?: boolean
-    onVote?: (threadId: string, voteType: 'up' | 'down' | 'neutral') => void
+    // onVote?: (threadId: string, voteType: 'up' | 'down' | 'neutral') => void
     onDelete?: (threadId: string) => void
 }
 
@@ -14,7 +14,7 @@ export const ThreadList = ({
     threads,
     currentUserId,
     loading,
-    onVote,
+    // onVote,
     onDelete
 }: ThreadListProps) => {
     if (loading) {
@@ -40,7 +40,7 @@ export const ThreadList = ({
                     key={thread.id}
                     thread={thread}
                     currentUserId={currentUserId}
-                    onVote={onVote}
+                    // onVote={onVote}
                     onDelete={onDelete}
                 />
             ))}

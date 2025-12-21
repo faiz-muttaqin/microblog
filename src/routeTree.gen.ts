@@ -9,8 +9,11 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as threadAppRouteRouteImport } from './routes/(thread-app)/route'
 import { Route as authRouteRouteImport } from './routes/(auth)/route'
-import { Route as IndexRouteImport } from './routes/index'
+import { Route as threadAppIndexRouteImport } from './routes/(thread-app)/index'
+import { Route as threadAppTrendingsRouteImport } from './routes/(thread-app)/trendings'
+import { Route as threadAppProfileRouteImport } from './routes/(thread-app)/profile'
 import { Route as errors503RouteImport } from './routes/(errors)/503'
 import { Route as errors500RouteImport } from './routes/(errors)/500'
 import { Route as errors404RouteImport } from './routes/(errors)/404'
@@ -26,6 +29,8 @@ import { Route as EditorThemeRouteRouteImport } from './routes/editor/theme/rout
 import { Route as DashboardAuthenticatedRouteRouteImport } from './routes/dashboard/_authenticated/route'
 import { Route as EditorThemeIndexRouteImport } from './routes/editor/theme/index'
 import { Route as DashboardAuthenticatedIndexRouteImport } from './routes/dashboard/_authenticated/index'
+import { Route as threadAppThreadsIndexRouteImport } from './routes/(thread-app)/threads/index'
+import { Route as threadAppThreadsIdRouteImport } from './routes/(thread-app)/threads/$id'
 import { Route as DashboardAuthenticatedSettingsRouteRouteImport } from './routes/dashboard/_authenticated/settings/route'
 import { Route as DashboardAuthenticatedUsersIndexRouteImport } from './routes/dashboard/_authenticated/users/index'
 import { Route as DashboardAuthenticatedTasksIndexRouteImport } from './routes/dashboard/_authenticated/tasks/index'
@@ -39,14 +44,28 @@ import { Route as DashboardAuthenticatedSettingsAppearanceRouteImport } from './
 import { Route as DashboardAuthenticatedSettingsAccountRouteImport } from './routes/dashboard/_authenticated/settings/account'
 import { Route as DashboardAuthenticatedErrorsErrorRouteImport } from './routes/dashboard/_authenticated/errors/$error'
 
+const threadAppRouteRoute = threadAppRouteRouteImport.update({
+  id: '/(thread-app)',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const authRouteRoute = authRouteRouteImport.update({
   id: '/(auth)',
   getParentRoute: () => rootRouteImport,
 } as any)
-const IndexRoute = IndexRouteImport.update({
+const threadAppIndexRoute = threadAppIndexRouteImport.update({
   id: '/',
   path: '/',
-  getParentRoute: () => rootRouteImport,
+  getParentRoute: () => threadAppRouteRoute,
+} as any)
+const threadAppTrendingsRoute = threadAppTrendingsRouteImport.update({
+  id: '/trendings',
+  path: '/trendings',
+  getParentRoute: () => threadAppRouteRoute,
+} as any)
+const threadAppProfileRoute = threadAppProfileRouteImport.update({
+  id: '/profile',
+  path: '/profile',
+  getParentRoute: () => threadAppRouteRoute,
 } as any)
 const errors503Route = errors503RouteImport.update({
   id: '/(errors)/503',
@@ -125,6 +144,16 @@ const DashboardAuthenticatedIndexRoute =
     path: '/',
     getParentRoute: () => DashboardAuthenticatedRouteRoute,
   } as any)
+const threadAppThreadsIndexRoute = threadAppThreadsIndexRouteImport.update({
+  id: '/threads/',
+  path: '/threads/',
+  getParentRoute: () => threadAppRouteRoute,
+} as any)
+const threadAppThreadsIdRoute = threadAppThreadsIdRouteImport.update({
+  id: '/threads/$id',
+  path: '/threads/$id',
+  getParentRoute: () => threadAppRouteRoute,
+} as any)
 const DashboardAuthenticatedSettingsRouteRoute =
   DashboardAuthenticatedSettingsRouteRouteImport.update({
     id: '/settings',
@@ -199,7 +228,6 @@ const DashboardAuthenticatedErrorsErrorRoute =
   } as any)
 
 export interface FileRoutesByFullPath {
-  '/': typeof IndexRoute
   '/dashboard': typeof DashboardAuthenticatedRouteRouteWithChildren
   '/editor/theme': typeof EditorThemeRouteRouteWithChildren
   '/forgot-password': typeof authForgotPasswordRoute
@@ -213,7 +241,12 @@ export interface FileRoutesByFullPath {
   '/404': typeof errors404Route
   '/500': typeof errors500Route
   '/503': typeof errors503Route
+  '/profile': typeof threadAppProfileRoute
+  '/trendings': typeof threadAppTrendingsRoute
+  '/': typeof threadAppIndexRoute
   '/dashboard/settings': typeof DashboardAuthenticatedSettingsRouteRouteWithChildren
+  '/threads/$id': typeof threadAppThreadsIdRoute
+  '/threads': typeof threadAppThreadsIndexRoute
   '/dashboard/': typeof DashboardAuthenticatedIndexRoute
   '/editor/theme/': typeof EditorThemeIndexRoute
   '/dashboard/errors/$error': typeof DashboardAuthenticatedErrorsErrorRoute
@@ -229,7 +262,6 @@ export interface FileRoutesByFullPath {
   '/dashboard/users': typeof DashboardAuthenticatedUsersIndexRoute
 }
 export interface FileRoutesByTo {
-  '/': typeof IndexRoute
   '/forgot-password': typeof authForgotPasswordRoute
   '/login': typeof authLoginRoute
   '/otp': typeof authOtpRoute
@@ -241,6 +273,11 @@ export interface FileRoutesByTo {
   '/404': typeof errors404Route
   '/500': typeof errors500Route
   '/503': typeof errors503Route
+  '/profile': typeof threadAppProfileRoute
+  '/trendings': typeof threadAppTrendingsRoute
+  '/': typeof threadAppIndexRoute
+  '/threads/$id': typeof threadAppThreadsIdRoute
+  '/threads': typeof threadAppThreadsIndexRoute
   '/dashboard': typeof DashboardAuthenticatedIndexRoute
   '/editor/theme': typeof EditorThemeIndexRoute
   '/dashboard/errors/$error': typeof DashboardAuthenticatedErrorsErrorRoute
@@ -257,8 +294,8 @@ export interface FileRoutesByTo {
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
-  '/': typeof IndexRoute
   '/(auth)': typeof authRouteRouteWithChildren
+  '/(thread-app)': typeof threadAppRouteRouteWithChildren
   '/dashboard/_authenticated': typeof DashboardAuthenticatedRouteRouteWithChildren
   '/editor/theme': typeof EditorThemeRouteRouteWithChildren
   '/(auth)/forgot-password': typeof authForgotPasswordRoute
@@ -272,7 +309,12 @@ export interface FileRoutesById {
   '/(errors)/404': typeof errors404Route
   '/(errors)/500': typeof errors500Route
   '/(errors)/503': typeof errors503Route
+  '/(thread-app)/profile': typeof threadAppProfileRoute
+  '/(thread-app)/trendings': typeof threadAppTrendingsRoute
+  '/(thread-app)/': typeof threadAppIndexRoute
   '/dashboard/_authenticated/settings': typeof DashboardAuthenticatedSettingsRouteRouteWithChildren
+  '/(thread-app)/threads/$id': typeof threadAppThreadsIdRoute
+  '/(thread-app)/threads/': typeof threadAppThreadsIndexRoute
   '/dashboard/_authenticated/': typeof DashboardAuthenticatedIndexRoute
   '/editor/theme/': typeof EditorThemeIndexRoute
   '/dashboard/_authenticated/errors/$error': typeof DashboardAuthenticatedErrorsErrorRoute
@@ -290,7 +332,6 @@ export interface FileRoutesById {
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
-    | '/'
     | '/dashboard'
     | '/editor/theme'
     | '/forgot-password'
@@ -304,7 +345,12 @@ export interface FileRouteTypes {
     | '/404'
     | '/500'
     | '/503'
+    | '/profile'
+    | '/trendings'
+    | '/'
     | '/dashboard/settings'
+    | '/threads/$id'
+    | '/threads'
     | '/dashboard/'
     | '/editor/theme/'
     | '/dashboard/errors/$error'
@@ -320,7 +366,6 @@ export interface FileRouteTypes {
     | '/dashboard/users'
   fileRoutesByTo: FileRoutesByTo
   to:
-    | '/'
     | '/forgot-password'
     | '/login'
     | '/otp'
@@ -332,6 +377,11 @@ export interface FileRouteTypes {
     | '/404'
     | '/500'
     | '/503'
+    | '/profile'
+    | '/trendings'
+    | '/'
+    | '/threads/$id'
+    | '/threads'
     | '/dashboard'
     | '/editor/theme'
     | '/dashboard/errors/$error'
@@ -347,8 +397,8 @@ export interface FileRouteTypes {
     | '/dashboard/users'
   id:
     | '__root__'
-    | '/'
     | '/(auth)'
+    | '/(thread-app)'
     | '/dashboard/_authenticated'
     | '/editor/theme'
     | '/(auth)/forgot-password'
@@ -362,7 +412,12 @@ export interface FileRouteTypes {
     | '/(errors)/404'
     | '/(errors)/500'
     | '/(errors)/503'
+    | '/(thread-app)/profile'
+    | '/(thread-app)/trendings'
+    | '/(thread-app)/'
     | '/dashboard/_authenticated/settings'
+    | '/(thread-app)/threads/$id'
+    | '/(thread-app)/threads/'
     | '/dashboard/_authenticated/'
     | '/editor/theme/'
     | '/dashboard/_authenticated/errors/$error'
@@ -379,8 +434,8 @@ export interface FileRouteTypes {
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
-  IndexRoute: typeof IndexRoute
   authRouteRoute: typeof authRouteRouteWithChildren
+  threadAppRouteRoute: typeof threadAppRouteRouteWithChildren
   DashboardAuthenticatedRouteRoute: typeof DashboardAuthenticatedRouteRouteWithChildren
   EditorThemeRouteRoute: typeof EditorThemeRouteRouteWithChildren
   errors401Route: typeof errors401Route
@@ -392,6 +447,13 @@ export interface RootRouteChildren {
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/(thread-app)': {
+      id: '/(thread-app)'
+      path: ''
+      fullPath: ''
+      preLoaderRoute: typeof threadAppRouteRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/(auth)': {
       id: '/(auth)'
       path: ''
@@ -399,12 +461,26 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof authRouteRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/': {
-      id: '/'
+    '/(thread-app)/': {
+      id: '/(thread-app)/'
       path: '/'
       fullPath: '/'
-      preLoaderRoute: typeof IndexRouteImport
-      parentRoute: typeof rootRouteImport
+      preLoaderRoute: typeof threadAppIndexRouteImport
+      parentRoute: typeof threadAppRouteRoute
+    }
+    '/(thread-app)/trendings': {
+      id: '/(thread-app)/trendings'
+      path: '/trendings'
+      fullPath: '/trendings'
+      preLoaderRoute: typeof threadAppTrendingsRouteImport
+      parentRoute: typeof threadAppRouteRoute
+    }
+    '/(thread-app)/profile': {
+      id: '/(thread-app)/profile'
+      path: '/profile'
+      fullPath: '/profile'
+      preLoaderRoute: typeof threadAppProfileRouteImport
+      parentRoute: typeof threadAppRouteRoute
     }
     '/(errors)/503': {
       id: '/(errors)/503'
@@ -510,6 +586,20 @@ declare module '@tanstack/react-router' {
       fullPath: '/dashboard/'
       preLoaderRoute: typeof DashboardAuthenticatedIndexRouteImport
       parentRoute: typeof DashboardAuthenticatedRouteRoute
+    }
+    '/(thread-app)/threads/': {
+      id: '/(thread-app)/threads/'
+      path: '/threads'
+      fullPath: '/threads'
+      preLoaderRoute: typeof threadAppThreadsIndexRouteImport
+      parentRoute: typeof threadAppRouteRoute
+    }
+    '/(thread-app)/threads/$id': {
+      id: '/(thread-app)/threads/$id'
+      path: '/threads/$id'
+      fullPath: '/threads/$id'
+      preLoaderRoute: typeof threadAppThreadsIdRouteImport
+      parentRoute: typeof threadAppRouteRoute
     }
     '/dashboard/_authenticated/settings': {
       id: '/dashboard/_authenticated/settings'
@@ -620,6 +710,26 @@ const authRouteRouteWithChildren = authRouteRoute._addFileChildren(
   authRouteRouteChildren,
 )
 
+interface threadAppRouteRouteChildren {
+  threadAppProfileRoute: typeof threadAppProfileRoute
+  threadAppTrendingsRoute: typeof threadAppTrendingsRoute
+  threadAppIndexRoute: typeof threadAppIndexRoute
+  threadAppThreadsIdRoute: typeof threadAppThreadsIdRoute
+  threadAppThreadsIndexRoute: typeof threadAppThreadsIndexRoute
+}
+
+const threadAppRouteRouteChildren: threadAppRouteRouteChildren = {
+  threadAppProfileRoute: threadAppProfileRoute,
+  threadAppTrendingsRoute: threadAppTrendingsRoute,
+  threadAppIndexRoute: threadAppIndexRoute,
+  threadAppThreadsIdRoute: threadAppThreadsIdRoute,
+  threadAppThreadsIndexRoute: threadAppThreadsIndexRoute,
+}
+
+const threadAppRouteRouteWithChildren = threadAppRouteRoute._addFileChildren(
+  threadAppRouteRouteChildren,
+)
+
 interface DashboardAuthenticatedSettingsRouteRouteChildren {
   DashboardAuthenticatedSettingsAccountRoute: typeof DashboardAuthenticatedSettingsAccountRoute
   DashboardAuthenticatedSettingsAppearanceRoute: typeof DashboardAuthenticatedSettingsAppearanceRoute
@@ -693,8 +803,8 @@ const EditorThemeRouteRouteWithChildren =
   EditorThemeRouteRoute._addFileChildren(EditorThemeRouteRouteChildren)
 
 const rootRouteChildren: RootRouteChildren = {
-  IndexRoute: IndexRoute,
   authRouteRoute: authRouteRouteWithChildren,
+  threadAppRouteRoute: threadAppRouteRouteWithChildren,
   DashboardAuthenticatedRouteRoute:
     DashboardAuthenticatedRouteRouteWithChildren,
   EditorThemeRouteRoute: EditorThemeRouteRouteWithChildren,

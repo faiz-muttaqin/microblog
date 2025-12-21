@@ -17,22 +17,8 @@ import { CreateThreadDialog } from '../organisms/CreateThreadDialog'
 import { api } from '../../services/api'
 import type { Thread, User } from '@/types/thread'
 import { toast } from 'sonner'
+import { getErrorMessage } from '../../services/getErrorMessage'
 
-function getErrorMessage(error: unknown): string {
-  if (!error) return 'An unexpected error occurred'
-  if (typeof error === 'string') return error
-  if (error instanceof Error) return error.message
-  try {
-    // Try to read common shapes like { message } or { error: string }
-    const err = error as Record<string, unknown>
-    if (typeof err.message === 'string') return err.message
-    if (typeof err.error === 'string') return err.error
-    if (typeof err.data === 'string') return err.data
-  } catch {
-    // ignore
-  }
-  return 'An unexpected error occurred'
-}
 
 export const HomeTemplate = () => {
   const [threads, setThreads] = useState<Thread[]>([])
@@ -83,21 +69,7 @@ export const HomeTemplate = () => {
     }
   }
 
-  const handleVote = async (threadId: string, voteType: 'up' | 'down' | 'neutral') => {
-    try {
-      if (voteType === 'up') {
-        await api.upVoteThread(threadId)
-      } else if (voteType === 'down') {
-        await api.downVoteThread(threadId)
-      } else {
-        await api.neutralVoteThread(threadId)
-      }
-      loadData()
-    } catch (error: unknown) {
-      const message = getErrorMessage(error)
-      toast.error(message || 'Failed to vote')
-    }
-  }
+  
 
   const handleDeleteThread = async (threadId: string) => {
     if (!confirm('Are you sure you want to delete this thread?')) return
@@ -149,7 +121,7 @@ export const HomeTemplate = () => {
               threads={filteredThreads}
               currentUserId={user?.id}
               loading={loading}
-              onVote={handleVote}
+              // onVote={handleVote}
               onDelete={handleDeleteThread}
             />
           </div>

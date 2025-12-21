@@ -680,12 +680,7 @@ func UpVoteThreadHandler(c *gin.Context) {
 	// Validate thread exists
 	var thread model.Thread
 	if err := database.DB.Select("id").Where("id = ?", threadID).First(&thread).Error; err != nil {
-		c.JSON(http.StatusNotFound, gin.H{
-			"success": false,
-			"error":   err.Error(),
-			"message": "thread not found",
-			"data":    gin.H{},
-		})
+		c.JSON(http.StatusNotFound, gin.H{"success": false, "error": err.Error(), "message": "thread not found", "data": gin.H{}})
 		return
 	}
 	// Check if user already voted
@@ -738,17 +733,24 @@ func UpVoteThreadHandler(c *gin.Context) {
 		`, threadID, threadID, threadID).Error; err != nil {
 		logrus.Println(err)
 	}
+	if err := database.DB.Where("id = ?", threadID).First(&thread).Error; err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"success": false, "error": err.Error(), "message": "thread not found", "data": gin.H{}})
+		return
+	}
 
 	c.JSON(http.StatusOK, gin.H{
 		"success": true,
 		"message": "thread up voted",
 		"data": gin.H{
-			"vote": gin.H{
-				"id":       vote.ID,
-				"threadId": vote.ThreadID,
-				"userId":   vote.UserID,
-				"voteType": 1,
-			},
+			"id":               vote.ID,
+			"thread_id":        vote.ThreadID,
+			"user_id":          vote.UserID,
+			"vote_type":        "up",
+			"total_up_votes":   thread.TotalUpVotes,
+			"total_down_votes": thread.TotalDownVotes,
+			"total_comments":   thread.TotalComments,
+			"up_voted_by_me":   true,
+			"down_voted_by_me": false,
 		},
 	})
 }
@@ -827,17 +829,23 @@ func DownVoteThreadHandler(c *gin.Context) {
 		`, threadID, threadID, threadID).Error; err != nil {
 		logrus.Println(err)
 	}
-
+	if err := database.DB.Where("id = ?", threadID).First(&thread).Error; err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"success": false, "error": err.Error(), "message": "thread not found", "data": gin.H{}})
+		return
+	}
 	c.JSON(http.StatusOK, gin.H{
 		"success": true,
 		"message": "thread down voted",
 		"data": gin.H{
-			"vote": gin.H{
-				"id":       vote.ID,
-				"threadId": vote.ThreadID,
-				"userId":   vote.UserID,
-				"voteType": -1,
-			},
+			"id":               vote.ID,
+			"thread_id":        vote.ThreadID,
+			"user_id":          vote.UserID,
+			"vote_type":        "up",
+			"total_up_votes":   thread.TotalUpVotes,
+			"total_down_votes": thread.TotalDownVotes,
+			"total_comments":   thread.TotalComments,
+			"up_voted_by_me":   true,
+			"down_voted_by_me": false,
 		},
 	})
 }
@@ -916,17 +924,24 @@ func NeutralVoteThreadHandler(c *gin.Context) {
 		`, threadID, threadID, threadID).Error; err != nil {
 		logrus.Println(err)
 	}
+	if err := database.DB.Where("id = ?", threadID).First(&thread).Error; err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"success": false, "error": err.Error(), "message": "thread not found", "data": gin.H{}})
+		return
+	}
 
 	c.JSON(http.StatusOK, gin.H{
 		"success": true,
 		"message": "thread vote neutralized",
 		"data": gin.H{
-			"vote": gin.H{
-				"id":       vote.ID,
-				"threadId": vote.ThreadID,
-				"userId":   vote.UserID,
-				"voteType": 0,
-			},
+			"id":               vote.ID,
+			"thread_id":        vote.ThreadID,
+			"user_id":          vote.UserID,
+			"vote_type":        "up",
+			"total_up_votes":   thread.TotalUpVotes,
+			"total_down_votes": thread.TotalDownVotes,
+			"total_comments":   thread.TotalComments,
+			"up_voted_by_me":   true,
+			"down_voted_by_me": false,
 		},
 	})
 }
@@ -995,18 +1010,23 @@ func UpVoteCommentHandler(c *gin.Context) {
 		`, commentID, commentID, commentID).Error; err != nil {
 		logrus.Println(err)
 	}
+	if err := database.DB.Where("id = ?", commentID).First(&comment).Error; err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"success": false, "error": err.Error(), "message": "thread not found", "data": gin.H{}})
+		return
+	}
 
 	c.JSON(http.StatusOK, gin.H{
 		"success": true,
 		"message": "thread comment up voted",
 		"data": gin.H{
-			"vote": gin.H{
-				"id":        vote.ID,
-				"threadId":  threadID,
-				"commentId": commentID,
-				"userId":    user.ID,
-				"voteType":  1,
-			},
+			"id":               vote.ID,
+			"thread_id":        vote.CommentID,
+			"user_id":          vote.UserID,
+			"vote_type":        "up",
+			"total_up_votes":   comment.TotalUpVotes,
+			"total_down_votes": comment.TotalDownVotes,
+			"up_voted_by_me":   true,
+			"down_voted_by_me": false,
 		},
 	})
 }
@@ -1075,17 +1095,22 @@ func DownVoteCommentHandler(c *gin.Context) {
 		`, commentID, commentID, commentID).Error; err != nil {
 		logrus.Println(err)
 	}
+	if err := database.DB.Where("id = ?", commentID).First(&comment).Error; err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"success": false, "error": err.Error(), "message": "thread not found", "data": gin.H{}})
+		return
+	}
 	c.JSON(http.StatusOK, gin.H{
 		"success": true,
 		"message": "thread comment down voted",
 		"data": gin.H{
-			"vote": gin.H{
-				"id":        vote.ID,
-				"threadId":  threadID,
-				"commentId": commentID,
-				"userId":    user.ID,
-				"voteType":  -1,
-			},
+			"id":               vote.ID,
+			"thread_id":        vote.CommentID,
+			"user_id":          vote.UserID,
+			"vote_type":        "up",
+			"total_up_votes":   comment.TotalUpVotes,
+			"total_down_votes": comment.TotalDownVotes,
+			"up_voted_by_me":   true,
+			"down_voted_by_me": false,
 		},
 	})
 }
@@ -1155,17 +1180,22 @@ func NeutralVoteCommentHandler(c *gin.Context) {
 		`, commentID, commentID, commentID).Error; err != nil {
 		logrus.Println(err)
 	}
+	if err := database.DB.Where("id = ?", commentID).First(&comment).Error; err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"success": false, "error": err.Error(), "message": "thread not found", "data": gin.H{}})
+		return
+	}
 	c.JSON(http.StatusOK, gin.H{
 		"success": true,
 		"message": "thread comment neutral voted",
 		"data": gin.H{
-			"vote": gin.H{
-				"id":        vote.ID,
-				"threadId":  threadID,
-				"commentId": commentID,
-				"userId":    user.ID,
-				"voteType":  0,
-			},
+			"id":               vote.ID,
+			"thread_id":        vote.CommentID,
+			"user_id":          vote.UserID,
+			"vote_type":        "up",
+			"total_up_votes":   comment.TotalUpVotes,
+			"total_down_votes": comment.TotalDownVotes,
+			"up_voted_by_me":   true,
+			"down_voted_by_me": false,
 		},
 	})
 }

@@ -3,7 +3,8 @@
 // import DiscordIcon from "@/assets/discord.svg";
 // import FigmaIcon from "@/assets/figma.svg";
 // import GitHubIcon from "@/assets/github.svg";
-import { Logo } from "@/assets/logo";
+// import { Logo } from "@/assets/logo";
+import { LuPalette } from "react-icons/lu";
 // import TwitterIcon from "@/assets/twitter.svg";
 // import { FigmaExportDialog } from "@/components/figma-export-dialog";
 // import { SocialLink } from "@/components/social-link";
@@ -26,8 +27,8 @@ export function Header() {
       <div className="flex items-center justify-between gap-2 p-4">
         <div className="flex items-center gap-1">
           <Link to="/" className="flex items-center gap-2">
-            <Logo />
-            <span className="hidden font-bold md:block">dashcn</span>
+            <LuPalette className="text-2xl" />
+            <span className="hidden font-bold md:block">Theme Editor</span>
           </Link>
         </div>
         <div className="flex items-center gap-3.5">

@@ -1,2 +1,2 @@
-export { apiClient, ApiClient, type ApiResponse } from './client';
+export { apiClient, ApiClient } from './client';
 export { StorageHelper, type AppTable } from './storage';

@@ -1,6 +1,7 @@
 import { type SVGProps } from 'react'
+import { Link } from '@tanstack/react-router'
 import { Root as Radio, Item } from '@radix-ui/react-radio-group'
-import { CircleCheck, RotateCcw, Settings } from 'lucide-react'
+import { CircleCheck,  RotateCcw, Settings } from 'lucide-react'
 import { IconDir } from '@/assets/custom/icon-dir'
 import { IconLayoutCompact } from '@/assets/custom/icon-layout-compact'
 import { IconLayoutDefault } from '@/assets/custom/icon-layout-default'
@@ -63,10 +64,12 @@ export function ConfigDrawer() {
           </SheetDescription>
         </SheetHeader>
         <div className='space-y-6 overflow-y-auto px-4'>
-          <SectionTitle
-            title='Theme'
-            showReset={false}
-          />
+          <Link to="/editor/theme">
+            <SectionTitle
+              title='Theme'
+              showReset={false}
+            />
+          </Link>
           <ThemePresetSelect className="w-10" />
           <ThemeConfig />
           <SidebarConfig />
