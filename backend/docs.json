@@ -87,7 +87,7 @@
   "info": {
     "description": "API Documentation for microblog",
     "title": "microblog",
-    "version": "0.0.205"
+    "version": "0.0.218"
   },
   "openapi": "3.0.4",
   "paths": {
@@ -12872,6 +12872,73 @@
         },
         "security": null,
         "summary": "Update MarkChatRead",
+        "tags": [
+          "Api"
+        ]
+      }
+    },
+    "/api/google-fonts": {
+      "get": {
+        "description": "Retrieve a list of resources with optional filtering and pagination",
+        "operationId": "getApiGoogle-Fonts",
+        "parameters": null,
+        "requestBody": {},
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "examples": {
+                  "Example1": {
+                    "value": null
+                  }
+                }
+              }
+            },
+            "description": "Response 200"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized - Authentication required"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Forbidden - Insufficient permissions"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not found - Resource does not exist"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Internal server error"
+          }
+        },
+        "security": null,
+        "summary": "Get all GetGoogleFonts",
         "tags": [
           "Api"
         ]

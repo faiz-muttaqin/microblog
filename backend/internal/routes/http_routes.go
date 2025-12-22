@@ -24,7 +24,8 @@ func Routes() {
 	backendAPI.OPTIONS("/auth/login", handler.GetAuthLogin())
 	backendAPI.GET("/auth/login", handler.GetAuthLogin())
 	backendAPI.GET("/auth/logout", handler.GetAuthLogout())
-	backendAPI.GET("/auth/verify", handler.VerifyAuth()) // Test auth endpoint
+	backendAPI.GET("/auth/verify", handler.VerifyAuth())      // Test auth endpoint
+	backendAPI.GET("/google-fonts", handler.GetGoogleFonts()) // Google Fonts list
 	// backendAPI.GET("/roles", handler.GetRoles())
 	// backendAPI.GET("/users", handler.GET_DEFAULT_TableDataHandler(database.DB, &model.User{}, []string{"UserRole"}))
 	// r.POST("/users", handler.POST_DEFAULT_TableDataHandler(database.DB, &model.User{}, []string{"UserRole"}))
