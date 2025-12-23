@@ -70,7 +70,15 @@ func StartServer(embeddedFiles embed.FS) {
 	routes.R = gin.Default()
 	routes.R.Use(logger.GinLoggerMiddleware(ginLogFile))
 	routes.R.Use(middleware.Security())
-	routes.R.Use(cors.Default())
+
+	// Configure CORS to allow all origins
+	routes.R.Use(cors.New(cors.Config{
+		AllowOrigins:  []string{"*"},
+		AllowMethods:  []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"},
+		AllowHeaders:  []string{"*"},
+		ExposeHeaders: []string{"Content-Length"},
+		MaxAge:        12 * 3600, // 12 hours
+	}))
 
 	routes.Routes()
 

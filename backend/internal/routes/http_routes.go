@@ -21,8 +21,7 @@ func Routes() {
 	// model.User endpoints
 	backendAPI := R.Group(util.GetPathOnly(util.Getenv("VITE_BACKEND", "/api")))
 	backendAPI.GET("/options", handler.GetOptions())
-	backendAPI.OPTIONS("/auth/login", handler.GetAuthLogin())
-	backendAPI.GET("/auth/login", handler.GetAuthLogin())
+	backendAPI.Any("/auth/login", handler.GetAuthLogin())
 	backendAPI.GET("/auth/logout", handler.GetAuthLogout())
 	backendAPI.GET("/auth/verify", handler.VerifyAuth())      // Test auth endpoint
 	backendAPI.GET("/google-fonts", handler.GetGoogleFonts()) // Google Fonts list
